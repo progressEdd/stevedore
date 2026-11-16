@@ -1,0 +1,11 @@
+[project]
+name = "test-gsd-flow"
+version = "0.1.0"
+description = "A test project to validate the end-to-end branch creation workflow."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "ipykernel>=6.29.5",
+    "openai>=1.91.0",
+    "python-dotenv>=1.1.0",
+]

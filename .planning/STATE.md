@@ -1,12 +1,12 @@
 ---
-next_action: /skill:define
-progress: 0%
+next_action: /skill:implement
+progress: planned
 ---
 
 # State
 
-**Phase:** <none yet — run /skill:define to create phase 01>
-**Status:** <one line, e.g. "setup complete — awaiting first phase">
+**Phase:** 01 pptx-to-html
+**Status:** planned — 8 plans in 8 waves, awaiting execution (all target `progressEdd`)
 
 <!--
 STATE.md is the router surface. The frontmatter (next_action, progress) is the

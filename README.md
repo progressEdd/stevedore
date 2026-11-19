@@ -1,14 +1,23 @@
-# stevedore
+# stevedore — `.pptx` → HTML agent skill
 
-pptx ↔ HTML conversion skills — the inverse pair to [dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx).
+An agent skill that converts PowerPoint decks to native HTML/CSS — our own zero-dependency
+Node implementation (no `npm install`, bare `node`), the inverse of
+[dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx).
 
-- `skills/` — agent skills (one `SKILL.md` folder each)
-- `scripts/` — runnable scripts
-- `src/` — the converter library (zero-dep, bare `node`)
+## Install (git subtree)
 
-In progress: a `.pptx` → HTML converter skill — hybrid layout (absolute boxes, semantic
-markup inside), full-fidelity target with PPTX2HTML as reference. Consumed via
-`git subtree add`; no npm packaging.
+    git subtree add --prefix=.agents/skills/stevedore https://github.com/progressEdd/stevedore.git stevedore --squash
 
-Credits: logic adapted from [dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx)
-and [PPTX2HTML](https://github.com/g21589/PPTX2HTML) (both MIT) is credited where used.
+## Run
+
+    node .agents/skills/stevedore/scripts/pptx-to-html.js deck.pptx -o deck.html
+
+- `scripts/pptx-to-html.js` — the CLI
+- `scripts/src/` — the converter library (zero-dep: `node:` built-ins only)
+- `scripts/test/` — test suite (`node --test scripts/test/`)
+
+Reverse direction (`skills/html-to-pptx/`) is reserved for a later phase.
+
+Credits: logic adapted from [PPTX2HTML](https://github.com/g21589/PPTX2HTML) (`c8a96eb`) and
+[dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx) (`v2.1.2`) — both MIT — is credited
+where used.

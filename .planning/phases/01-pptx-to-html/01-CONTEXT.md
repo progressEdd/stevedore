@@ -4,6 +4,10 @@
 
 **GitHub parent:** #1
 
+**GitHub parent:** #1
+
+**GitHub parent:** #1
+
 ## Goal
 
 Deliver an agent skill (the inverse of dom-to-pptx) that converts `.pptx` decks to HTML — our own implementation with PPTX2HTML as the reference — living on a clean development branch shaped like the shippEdd repo, consumed via git subtree, no npm packaging.
@@ -22,7 +26,7 @@ Deliver an agent skill (the inverse of dom-to-pptx) that converts `.pptx` decks 
 | 8 | Where does development happen? | On that dedicated branch (just like the shippEdd repo's master carries the suite) — plan executors fork from and merge back into it | User directive: "make a branch just like shippEdd where we do the development on" | #9 |
 | 9 | Development branch name? | `progressEdd` | User choice and cross-repo convention (LAND.E has one too); forked from master | #10 |
 | 10 | Converter output? | ~~settled in round 3~~ → settled as decision 12 (both modes) | resolved | #11 |
-| 11 | Dependencies? | Zero-dep — everything self-implemented in `src/`; runs on bare `node`, node built-ins (e.g. `node:zlib`) allowed | User choice; makes subtree-add → run truly frictionless | — |
+| 11 | Dependencies? | Zero-dep — everything self-implemented in `src/`; runs on bare `node`, node built-ins (e.g. `node:zlib`) allowed | User choice; makes subtree-add → run truly frictionless | #30 |
 | 12 | Converter output? | Both modes: default one self-contained `deck.html` (inline CSS, data-URI images) + `--split` flag emitting a per-slide folder + `index.html` | Single file = best viewing artifact; per-slide files = GitHub-collab without conflicts; shared render core makes both cheap | #12 |
 | 13 | Verification decks? | Round-trip: LAND.E `presentation/slides.html` (655 KB real deck) → dom-to-pptx → pptx → our converter → HTML, compared to original; plus PPTX2HTML's samples for breadth | User-supplied anchor + round 2 Q2 choice | #13 |
 | 14 | What does `progressEdd` carry from master? | Workflow plumbing stays (`.planning/`, `.agents/`, `AGENTS.md`, `02-worktrees/`, `.gitignore`, `00-supporting-files/`, LICENSE, README); template decor removed (`00-dev-log/`, `01-dev-onboarding/` submodule, `.foam/`); scaffolds `scripts/ + skills/ + src/` | User choice; master untouched until the phase merges in | #14 |
@@ -31,11 +35,11 @@ Deliver an agent skill (the inverse of dom-to-pptx) that converts `.pptx` decks 
 | 17 | When is the branch created? | Now, during grilling — user directive: "let's just do it now so that we don't have a PR conflict" | Branch exists before executor waves fork from it | #17 |
 | 18 | Skill name(s)? | `skills/pptx-to-html/` — our converter. Reverse direction named `skills/html-to-pptx/` (scope settled in round 6) | Self-describing names; phase slug matches | #18 |
 | 19 | Checkout topology? | Main checkout = `progressEdd` (dev happens here); `master` checked out in the `02-worktrees/master` worktree since master gets modified by phase merges | User directive: "checkout the current branch to progressEdd … then have a master branch as a worktree" — executed during grilling | #19 |
-| 20 | Scope of `skills/html-to-pptx/`? | Name reserved only — empty placeholder folder; built in a later phase. Sequencing: core scripts (`src/` + `scripts/`) come first; no skills testing until the core is up | "We aren't doing any skills testing until the core scripts are up" | — |
+| 20 | Scope of `skills/html-to-pptx/`? | Name reserved only — empty placeholder folder; built in a later phase. Sequencing: core scripts (`src/` + `scripts/`) come first; no skills testing until the core is up | "We aren't doing any skills testing until the core scripts are up" | #31 |
 | 21 | Parity depth for phase 01? | Staged parity — full parse-model coverage with tiered render fidelity: text/fills/images/tables/inheritance fully rendered; charts + SmartArt parsed → minimal render + diagnostics; EMF/WMF, TIFF, EOT fonts, animation player deferred to later phases | Research-forced choice; keeps decision 7 as the roadmap target while phase 01 stays shippable | #20 |
-| 22 | Animations in phase-01 output? | Static-first — parse `p:timing` fully, emit as embedded JSON data; no player runtime yet (upstream `player=false` seam) | Matches "core scripts up first"; player is a later-phase add-on |
-| 23 | Which branch carries the JS work? | `stevedore` — own worktree at `02-worktrees/stevedore`, forked from `progressEdd`; ALL phase-01 executor plans retargeted (`target: stevedore`). `progressEdd` = committed repo-level shell, no app work piles onto it. Merge chain: agent branch → `stevedore` at phase end; `stevedore` integrates into `progressEdd`/`master` at ship | User directive: "it should be on the stevedore worktree branch if you are doing any js. All the progressEdd repo level is already committed. Correct the plans." |
-| 24 | What does the stevedore branch contain? | The branch IS the skill folder, shippEdd-shaped: `SKILL.md` + `README.md` + `LICENSE` + `reference/` + `scripts/` only — `src` lives inside `scripts/` (`scripts/src/`, `scripts/test/`, `scripts/package.json`, `scripts/examples/`). No `.planning`, no `.agents`, no repo scaffolding. Consumers: `git subtree add --prefix=.agents/skills/stevedore https://github.com/progressEdd/stevedore.git stevedore --squash` | User directive: "stevedore's branch should only contain the scripts folder and readme … the src should also live in the scripts folder, we are treating stevedore as the skill folder see shippEdd's structure" | #21 |
+| 22 | Animations in phase-01 output? | Static-first — parse `p:timing` fully, emit as embedded JSON data; no player runtime yet (upstream `player=false` seam) | Matches "core scripts up first"; player is a later-phase add-on | #21 |
+| 23 | Which branch carries the JS work? | `stevedore` — own worktree at `02-worktrees/stevedore`, forked from `progressEdd`; ALL phase-01 executor plans retargeted (`target: stevedore`). `progressEdd` = committed repo-level shell, no app work piles onto it. Merge chain: agent branch → `stevedore` at phase end; `stevedore` integrates into `progressEdd`/`master` at ship | User directive: "it should be on the stevedore worktree branch if you are doing any js. All the progressEdd repo level is already committed. Correct the plans." | #32 |
+| 24 | What does the stevedore branch contain? | The branch IS the skill folder, shippEdd-shaped: `SKILL.md` + `README.md` + `LICENSE` + `reference/` + `scripts/` only — `src` lives inside `scripts/` (`scripts/src/`, `scripts/test/`, `scripts/package.json`, `scripts/examples/`). No `.planning`, no `.agents`, no repo scaffolding. Consumers: `git subtree add --prefix=.agents/skills/stevedore https://github.com/progressEdd/stevedore.git stevedore --squash` | User directive: "stevedore's branch should only contain the scripts folder and readme … the src should also live in the scripts folder, we are treating stevedore as the skill folder see shippEdd's structure" | #33 |
 
 ## Constraints
 

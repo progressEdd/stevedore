@@ -1,12 +1,12 @@
 ---
-next_action: /skill:review
-progress: executed
+next_action: /skill:implement
+progress: planned
 ---
 
 # State
 
 **Phase:** 01 pptx-to-html
-**Status:** executed — 8 plans run sequentially, landed via PR #29 (stevedore); awaiting review
+**Status:** review: 1 gap found — fix plans 01-FX1, 01-FX2 awaiting execution
 
 <!--
 STATE.md is the router surface. The frontmatter (next_action, progress) is the

@@ -48,6 +48,54 @@ export function decorateSlideHtml(html, slide, opts = {}) {
   return out.slice(0, close) + tail.join('') + '\n' + out.slice(close);
 }
 
+// document shell (01-06): the shared <head>/CSS/scaler wrapper, factored
+// out of renderDocument — the split renderer reuses it verbatim for
+// per-slide pages and the index (same head/CSS/scaler on both sides of
+// decision 12). opts.centerViewport switches .pp-viewport from the
+// single-file column stack to the one-slide-per-page centering layout
+// (justify-content/align-items center, height 100vh).
+export function documentShell(bodyHtml, presentation, opts = {}) {
+  const W = presentation.slideSize.pxW;
+  const H = presentation.slideSize.pxH;
+  const viewport = opts.centerViewport
+    ? 'display: flex; justify-content: center; align-items: center; height: 100vh;'
+    : 'display: flex; flex-direction: column; align-items: center; min-height: 100vh;';
+  const title = escapeXml(documentTitle(presentation));
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>
+:root { --pp-w: ${W}px; --pp-h: ${H}px; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #1a1a1a; }
+.pp-viewport { ${viewport} }
+.pp-slide { position: relative; width: var(--pp-w); height: var(--pp-h);
+  background: #fff; overflow: hidden; margin: 16px 0;
+  transform-origin: top center; transform: scale(var(--pp-k, 1)); }
+.pp-el { position: absolute; }
+.pp-slide img { max-width: none; }
+.pp-slide[hidden]{display:none}
+</style>
+</head>
+<body>
+${bodyHtml}
+<script>
+(function () {
+  var fit = function () {
+    var k = Math.min(1, (document.documentElement.clientWidth - 32) / ${W});
+    document.querySelectorAll('.pp-slide').forEach(function (s) { s.style.setProperty('--pp-k', k); });
+  };
+  addEventListener('resize', fit); fit();
+})();
+</script>
+</body>
+</html>
+`;
+}
+
 export function renderDocument(presentation, rctx, opts = {}) {
   const W = presentation.slideSize.pxW;
   const H = presentation.slideSize.pxH;
@@ -69,40 +117,5 @@ export function renderDocument(presentation, rctx, opts = {}) {
         JSON.stringify(presentation.sections.map(s => ({ name: s.name, slides: s.slides })))
           .replace(/</g, '\\u003c')}</script>`
     : '';
-  const title = escapeXml(documentTitle(presentation));
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title}</title>
-<style>
-:root { --pp-w: ${W}px; --pp-h: ${H}px; }
-* { box-sizing: border-box; }
-body { margin: 0; background: #1a1a1a; }
-.pp-viewport { display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-.pp-slide { position: relative; width: var(--pp-w); height: var(--pp-h);
-  background: #fff; overflow: hidden; margin: 16px 0;
-  transform-origin: top center; transform: scale(var(--pp-k, 1)); }
-.pp-el { position: absolute; }
-.pp-slide img { max-width: none; }
-.pp-slide[hidden]{display:none}
-</style>
-</head>
-<body>
-<div class="pp-viewport">
-${slides}
-</div>${sectionsJson}
-<script>
-(function () {
-  var fit = function () {
-    var k = Math.min(1, (document.documentElement.clientWidth - 32) / ${W});
-    document.querySelectorAll('.pp-slide').forEach(function (s) { s.style.setProperty('--pp-k', k); });
-  };
-  addEventListener('resize', fit); fit();
-})();
-</script>
-</body>
-</html>
-`;
+  return documentShell(`<div class="pp-viewport">\n${slides}\n</div>${sectionsJson}`, presentation);
 }

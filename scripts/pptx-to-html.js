@@ -2,12 +2,13 @@
 // CLI entry (conventions adopted from upstream PPTX2HTML bin/pptx2html.js,
 // MIT). Runnable with bare `node` — zero install, zero deps (decision 5).
 // Exit codes: 0 ok (diagnostics without errors still ok), 1 any error-kind
-// diagnostic (or, under --strict, ANY diagnostic), 2 usage/IO errors,
-// 3 --split (not implemented until plan 01-06 — the flag exists now so the
-// CLI surface never breaks; decision 12 seam).
+// diagnostic (or, under --strict, ANY diagnostic), 2 usage/IO errors.
+// Output modes (decision 12): default one self-contained .html; --split
+// writes one page per slide + index.html into a directory.
 
-import { readFileSync, writeFileSync } from 'node:fs';
-import { convert } from './src/index.js'; // sibling after the scripts/ relocation (plan text said ../src/index.js)
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { convert, convertSplit } from './src/index.js'; // sibling after the scripts/ relocation (plan text said ../src/index.js)
 
 const USAGE = `Usage: node scripts/pptx-to-html.js <input.pptx> [options]
 
@@ -68,10 +69,15 @@ function defaultOutput(input) { // deck.pptx -> deck.html, next to the input
   return (dot > slash ? input.slice(0, dot) : input) + '.html';
 }
 
+function defaultSplitDir(input) { // deck.pptx -> deck-split/, next to the input
+  const slash = Math.max(input.lastIndexOf('/'), input.lastIndexOf('\\'));
+  const dot = input.lastIndexOf('.');
+  return (dot > slash ? input.slice(0, dot) : input) + '-split';
+}
+
 const args = parseArgs(process.argv.slice(2));
 if (args.help) { process.stdout.write(USAGE); process.exit(0); }
 if (args.input === null) fail(`missing <input.pptx>\n\n${USAGE}`);
-if (args.split) fail('--split is not implemented until plan 01-06', 3);
 
 let data;
 try {
@@ -82,16 +88,27 @@ try {
 
 let result;
 try {
-  result = convert(data, { slides: args.slides !== null ? expandSlides(args.slides) : undefined });
+  const options = { slides: args.slides !== null ? expandSlides(args.slides) : undefined };
+  result = args.split ? convertSplit(data, options) : convert(data, options);
 } catch (err) { // not a zip, missing package parts — a usage/IO failure, not content
   fail(err.message);
 }
 
-const output = args.output !== null ? args.output : defaultOutput(args.input);
-try {
-  writeFileSync(output, result.html);
-} catch (err) {
-  fail(`cannot write ${output}: ${err.message}`);
+if (args.split) {
+  const dir = args.output !== null ? args.output : defaultSplitDir(args.input);
+  try {
+    mkdirSync(dir, { recursive: true });
+    for (const file of result.files) writeFileSync(join(dir, file.name), file.html);
+  } catch (err) {
+    fail(`cannot write ${dir}: ${err.message}`);
+  }
+} else {
+  const output = args.output !== null ? args.output : defaultOutput(args.input);
+  try {
+    writeFileSync(output, result.html);
+  } catch (err) {
+    fail(`cannot write ${output}: ${err.message}`);
+  }
 }
 
 if (!args.quiet)

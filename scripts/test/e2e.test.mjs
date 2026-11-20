@@ -75,14 +75,8 @@ test('error path: non-zip input -> exit 2', () => {
   assert.match(r.stderr, /pptx-to-html: /);
 });
 
-test('--split exits 3 naming plan 01-06', () => {
-  const dir = mkdtempSync(path.join(tmpdir(), 'pptx-'));
-  const tmpPptx = path.join(dir, 'deck.pptx');
-  writeFileSync(tmpPptx, buildDeck({ slides: [{ texts: [{ text: 'x' }] }] }));
-  const r = runCli(tmpPptx, '--split');
-  assert.equal(r.status, 3);
-  assert.match(r.stderr, /not implemented until plan 01-06/);
-});
+// (01-02's '--split exits 3' stub test retired when 01-06 made --split
+// real — the split contract now lives in split.test.mjs)
 
 test('--help prints the usage block (--split and --strict documented)', () => {
   const r = runCli('--help');

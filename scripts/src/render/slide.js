@@ -7,9 +7,11 @@
 
 import { resolveFill } from '../pptx/fill.js';
 import { buildTextBody, matchPlaceholder } from '../pptx/text.js';
+import { buildTable } from '../pptx/table.js';
 import { geometrySvg } from './shape.js';
 import { svgPaint } from './paint.js';
 import { renderText } from './text.js';
+import { renderTable } from './table.js';
 
 // placeholder ph.type -> heading level for renderText's titleLevel
 const TITLE_LEVELS = { title: 1, ctrTitle: 1, subTitle: 2 };
@@ -48,6 +50,15 @@ function cropStyle(srcRect) {
   return `width:100%;height:100%;object-fit:cover;object-position:${px}% ${py}%`;
 }
 
+// parse-side ctx for graphicFrame content (tables now, charts and SmartArt
+// in 01-05's later tasks): everything the content parsers need from rctx
+function frameParseCtx(el, rctx) {
+  return {
+    theme: rctx.theme, diag: rctx.diag, pkg: rctx.pkg,
+    partName: rctx.partName, slideIndex: rctx.slideIndex,
+  };
+}
+
 function elementBox(el, rctx, slide, off = null) {
   const g = el.geom ?? { x: 0, y: 0, w: 0, h: 0, rot: 0 };
   let style = `left:${g.x - (off?.x ?? 0)}px;top:${g.y - (off?.y ?? 0)}px;width:${g.w}px;height:${g.h}px`;
@@ -75,6 +86,10 @@ function elementBox(el, rctx, slide, off = null) {
       slideCount: slide ? slide.index : null,
       titleLevel: el.ph ? TITLE_LEVELS[el.ph.type] ?? 0 : 0,
     }) : '';
+  } else if (el.kind === 'graphicFrame' && el.frameKind === 'table') {
+    // 01-05: a:tbl frames render as semantic tables inside the frame box
+    // (the frame's p:xfrm positions this .pp-el)
+    inner = renderTable(buildTable(el.node, frameParseCtx(el, rctx)), rctx);
   } else {
     inner = '';
   }

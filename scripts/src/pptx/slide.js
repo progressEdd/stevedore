@@ -162,10 +162,11 @@ function frameElement(node, layer, ctx, tf) {
     else if (graphicData.find('p:oleObj') || /ole/i.test(uri)) frameKind = 'oleObject';
     else if (/ink/i.test(uri) || graphicData.find('p:ink')) frameKind = 'ink';
   }
-  // only complain when it actually carries content we defer to later plans
+  // only complain when it actually carries content we defer to later plans;
+  // tables render in 01-05, so they are no longer "later plan" content
   if (frameKind === 'oleObject' || frameKind === 'ink')
     ctx.diag.add('unsupported', `${frameKind === 'ink' ? 'ink' : 'OLE/ActiveX object'} not rendered`, ctx.slideIndex);
-  else if (frameKind)
+  else if (frameKind && frameKind !== 'table')
     ctx.diag.add('unsupported', 'graphicFrame content (later plan)', ctx.slideIndex);
   const el = {
     layer,

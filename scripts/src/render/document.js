@@ -7,6 +7,25 @@
 import { escapeXml } from '../util/xml.js';
 import { renderSlide } from './slide.js';
 
+// per-slide data embed (01-06): the parsed p:timing + p:transition ride
+// the slide div as JSON inside <script type="application/json"> — data for
+// a future player, never a runtime (decision 22). JSON.stringify output is
+// made HTML-safe: '<' would close the script context, so it is escaped.
+function timingJsonScript(slide) {
+  const json = JSON.stringify({ timing: slide.timing ?? null, transition: slide.transition ?? null })
+    .replace(/</g, '\\u003c');
+  return `<script type="application/json" class="pp-timing-json">${json}</script>`;
+}
+
+// insert per-slide data as the last children of the rendered .pp-slide div
+// (broken-slide divs get the same decoration — every emitted slide carries
+// its data). Exported: the 01-06 split renderer reuses this verbatim.
+export function decorateSlideHtml(html, slide) {
+  const close = html.lastIndexOf('</div>');
+  if (close < 0) return html;
+  return html.slice(0, close) + timingJsonScript(slide) + '\n' + html.slice(close);
+}
+
 export function renderDocument(presentation, rctx, opts = {}) {
   const W = presentation.slideSize.pxW;
   const H = presentation.slideSize.pxH;
@@ -15,7 +34,7 @@ export function renderDocument(presentation, rctx, opts = {}) {
   // failures never take the whole document down
   const slides = presentation.slides.map(slide => {
     try {
-      return renderSlide(slide, rctx, { ...opts, W, H });
+      return decorateSlideHtml(renderSlide(slide, rctx, { ...opts, W, H }), slide);
     } catch (err) {
       rctx.diag.add('error', `failed to render slide ${slide.index}: ${err.message}`, slide.index);
       return `<div class="pp-slide pp-broken">Slide ${slide.index} could not be read</div>`;

@@ -10,6 +10,8 @@
 //   geom { x, y, w, h (px), rot (raw 60000ths deg) }; text concatenated a:t.
 
 import { XNode } from '../util/xml.js';
+import { parseTiming } from './timing.js';
+import { parseTransition } from './transition.js';
 
 const EMU_PER_PX = 9525;
 const px = (emu) => Math.round(emu / EMU_PER_PX);
@@ -325,5 +327,12 @@ export function buildSlide(sldRoot, ctx) {
   let defaultTextStyle = null;
   try { defaultTextStyle = pkg.xml(pkg.mainPart()).find('p:defaultTextStyle') ?? null; } catch { /* tolerated */ }
 
-  return { background, elements, notes: null, layoutRoot, masterRoot, defaultTextStyle };
+  // 01-06 decision 22: timing + transition parse to plain JSON embedded per
+  // slide — data for a future player, never a runtime (parse yes, player no)
+  return {
+    background, elements, notes: null,
+    timing: parseTiming(sldRoot.find('p:timing'), ctx),
+    transition: parseTransition(sldRoot, ctx),
+    layoutRoot, masterRoot, defaultTextStyle,
+  };
 }

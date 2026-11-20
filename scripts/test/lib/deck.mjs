@@ -136,13 +136,16 @@ function slideXml(spec) {
   const pics = (spec.pictures ?? []).map((entry, i) =>
     picXml(entry, (spec.texts?.length ?? 0) + i + 2)).join('');
   const show = spec.hidden ? ' show="0"' : '';
+  // 01-06 knobs: raw XML strings for p:transition and p:timing — the timing
+  // and transition parsers consume whatever shape the test hands in
+  const trailing = (spec.transition ?? '') + (spec.timing ?? '');
   return `${XML_DECL}
 <p:sld ${NS}${show}>
   <p:cSld>${bgXml(spec)}<p:spTree>
     <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
     <p:grpSpPr/>
 ${shapes}${pics}${spec.shapes ?? ''}
-  </p:spTree></p:cSld>
+  </p:spTree></p:cSld>${trailing}
 </p:sld>`;
 }
 

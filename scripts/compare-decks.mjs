@@ -147,13 +147,20 @@ function main() {
   if (srcAll.length === 0) failures.push(`no slides found in source ${srcPath}`);
   if (convSlides.length === 0) failures.push(`no slides found in converted ${convPath}`);
 
-  // Drop source slides with no text AND no images (Marp background sections).
+  // Drop source slides with no text AND no images (Marp background sections)
+  // — but only when the source has MORE slides than the converted deck: the
+  // rule deflates section-split containers that inflate counts. When raw
+  // counts already match, slides pair 1:1 and dropping would misalign them
+  // (found on the real LAND.E round trip: 20↔20 with empty slides on both
+  // sides at the same indexes).
   const dropped = [];
-  const srcSlides = [];
-  srcAll.forEach((s, i) => {
-    if (words(s).length === 0 && countImages(s) === 0) dropped.push(i + 1);
-    else srcSlides.push(s);
-  });
+  let srcSlides = srcAll;
+  if (srcAll.length > convSlides.length) {
+    srcSlides = srcAll.filter((s, i) => {
+      if (words(s).length === 0 && countImages(s) === 0) { dropped.push(i + 1); return false; }
+      return true;
+    });
+  }
 
   const out = [];
   out.push(`source     ${srcPath}: ${srcAll.length} slides` +

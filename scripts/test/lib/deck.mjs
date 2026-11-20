@@ -24,24 +24,65 @@ const CT_LAYOUT = 'application/vnd.openxmlformats-officedocument.presentationml.
 
 // Slide XML — exact template; later tests depend on its shape. One p:sp per
 // entry in slide.texts (cNvPr id increments, optional <p:ph type="title"/>).
+// 01-03 styling knobs per entry: geom (prst), fill (hex), grad, line
+// {w, dash, cap, compound, headEnd, tailEnd}, flipH, effects.
+function lineXml(line) {
+  if (!line) return '';
+  const attrs = [line.w != null ? ` w="${line.w}"` : '', line.cap ? ` cap="${line.cap}"` : '',
+    line.compound ? ` cmpd="${line.compound}"` : ''].join('');
+  const fill = line.color ? `<a:solidFill><a:srgbClr val="${line.color}"/></a:solidFill>` : '';
+  const dash = line.dash ? `<a:prstDash val="${line.dash}"/>` : '';
+  const end = (slot) => line[slot]
+    ? `<a:${slot} type="${line[slot].type}"${line[slot].w ? ` w="${line[slot].w}"` : ''}${line[slot].len ? ` len="${line[slot].len}"` : ''}/>`
+    : '';
+  return `<a:ln${attrs}>${fill}${dash}${end('headEnd')}${end('tailEnd')}</a:ln>`;
+}
+
+function spPrXml(entry, i) {
+  const geom = entry.geom ?? 'rect';
+  const flip = entry.flipH ? ' flipH="1"' : '';
+  const fill = entry.fill
+    ? `<a:solidFill><a:srgbClr val="${entry.fill}"/></a:solidFill>` : '';
+  const grad = entry.grad
+    ? `<a:gradFill><a:gsLst>` +
+      `<a:gs pos="0"><a:schemeClr val="accent1"/></a:gs>` +
+      `<a:gs pos="100000"><a:srgbClr val="FFFFFF"/></a:gs>` +
+      `</a:gsLst><a:lin ang="5400000" scaled="1"/></a:gradFill>` : '';
+  const effects = entry.effects
+    ? '<a:effectLst><a:outerShdw blurRad="50800" dist="38100" dir="2700000" algn="tl">' +
+      '<a:srgbClr val="000000"><a:alpha val="40000"/></a:srgbClr></a:outerShdw></a:effectLst>' : '';
+  return `<p:spPr><a:xfrm${flip}><a:off x="${entry.x ?? 838200}" y="${entry.y ?? 365125 + i * 1500000}"/>` +
+    `<a:ext cx="${entry.cx ?? 9144000}" cy="${entry.cy ?? 1325563}"/></a:xfrm>` +
+    `<a:prstGeom prst="${geom}"><a:avLst/></a:prstGeom>${fill}${grad}` +
+    `${lineXml(entry.line)}${effects}</p:spPr>`;
+}
+
+function bgXml(spec) {
+  if (spec.bgSolid)
+    return `<p:bg><p:bgPr><a:solidFill><a:srgbClr val="${spec.bgSolid}"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>`;
+  if (spec.bgGrad)
+    return `<p:bg><p:bgPr><a:gradFill><a:gsLst>` +
+      `<a:gs pos="0"><a:schemeClr val="accent1"/></a:gs>` +
+      `<a:gs pos="100000"><a:srgbClr val="FFFFFF"/></a:gs>` +
+      `</a:gsLst><a:lin ang="5400000" scaled="1"/><a:tileRect/></a:gradFill><a:effectLst/></p:bgPr></p:bg>`;
+  return '';
+}
+
 function slideXml(spec) {
   const shapes = (spec.texts ?? []).map((entry, i) => {
     const id = i + 2; // spTree root cNvPr is id 1
     const name = entry.name ?? (entry.title ? `Title ${i + 1}` : `TextBox ${i + 1}`);
-    const x = entry.x ?? 838200, y = entry.y ?? 365125 + i * 1500000;
-    const cx = entry.cx ?? 9144000, cy = entry.cy ?? 1325563;
     const ph = entry.title ? '<p:ph type="title"/>' : '';
     return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${escapeXml(name)}"/>` +
       `<p:cNvSpPr txBox="1"/><p:nvPr>${ph}</p:nvPr></p:nvSpPr>` +
-      `<p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
-      `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>` +
+      `${spPrXml(entry, i)}` +
       `<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" dirty="0"/>` +
       `<a:t>${escapeXml(entry.text)}</a:t></a:r></a:p></p:txBody></p:sp>`;
   }).join('');
   const show = spec.hidden ? ' show="0"' : '';
   return `${XML_DECL}
 <p:sld ${NS}${show}>
-  <p:cSld><p:spTree>
+  <p:cSld>${bgXml(spec)}<p:spTree>
     <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
     <p:grpSpPr/>
 ${shapes}

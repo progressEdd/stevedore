@@ -86,6 +86,7 @@ function shapeElement(node, layer, ctx, kind) {
     geom: geomOf(node, 'p:spPr/a:xfrm', ctx),
     text: textOfBody(node),
     image,
+    node, // raw element kept for the 01-03 styling engine (fills/geometry/lines)
   };
 }
 
@@ -111,6 +112,7 @@ function frameElement(node, layer, ctx) {
     geom: geomOf(node, 'p:xfrm', ctx),
     text: '',
     image: null,
+    node,
   };
 }
 
@@ -152,9 +154,11 @@ export function buildSlide(sldRoot, ctx) {
   let background = null;
   const bg = sldRoot.path('p:cSld/p:bg');
   if (bg) {
+    // minimal solid-hex capture only — the 01-03 render layer resolves the
+    // full p:bgPr fill (solid/grad/patt/blip) through the fill engine; bgRef
+    // style references arrive with shape styles in 01-04
     const hex = bg.path('p:bgPr/a:solidFill/a:srgbClr')?.attr('val');
     if (hex) background = { solid: '#' + hex };
-    else diag.add('approx', 'background style not rendered (fill engine later)', ctx.slideIndex);
   }
 
   // Resolve the slide's layout via the slide part's rels; the layout's

@@ -14,6 +14,12 @@ export class Diagnostics {
       throw new Error(`diagnostics: bad kind ${kind}`);
     this.items.push({ kind, msg, slide });
   }
+  // once per (msg, slide) — the rate-limiter for per-shape diagnostics that
+  // would otherwise flood the channel on shape-heavy slides (01-03)
+  addOnce(kind, msg, slide = null) {
+    if (this.items.some(i => i.msg === msg && i.slide === slide)) return;
+    this.add(kind, msg, slide);
+  }
   get hasErrors() { return this.items.some(d => d.kind === 'error'); }
   format() { return this.items.map(d => `${d.slide != null ? `slide ${d.slide}: ` : ''}${d.kind}: ${d.msg}`); }
 }

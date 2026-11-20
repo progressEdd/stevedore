@@ -15,7 +15,7 @@ export function renderDocument(presentation, rctx, opts = {}) {
   // failures never take the whole document down
   const slides = presentation.slides.map(slide => {
     try {
-      return renderSlide(slide, rctx, opts);
+      return renderSlide(slide, rctx, { ...opts, W, H });
     } catch (err) {
       rctx.diag.add('error', `failed to render slide ${slide.index}: ${err.message}`, slide.index);
       return `<div class="pp-slide pp-broken">Slide ${slide.index} could not be read</div>`;

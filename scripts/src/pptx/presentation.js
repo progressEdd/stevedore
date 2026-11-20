@@ -78,7 +78,7 @@ export function loadPresentation(pkg, diag) {
       : `<unresolved:${rid ?? '?'}>`;
     try {
       const sldRoot = pkg.xml(name);
-      const ctx = { pkg, diag, presentation, slideIndex: index, master: null, layout: null };
+      const ctx = { pkg, diag, presentation, slideIndex: index, partName: name, master: null, layout: null };
       const built = buildSlide(sldRoot, ctx);
       presentation.slides.push({
         partName: name,

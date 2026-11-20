@@ -5,15 +5,36 @@
 // backgrounds go through the full fill engine (solid / gradient / pattern /
 // picture) instead of the 01-02 solid-hex-only path.
 
-import { escapeXml } from '../util/xml.js';
 import { resolveFill } from '../pptx/fill.js';
+import { buildTextBody, matchPlaceholder } from '../pptx/text.js';
 import { geometrySvg } from './shape.js';
 import { svgPaint } from './paint.js';
+import { renderText } from './text.js';
 
-// placeholder ph.type -> semantic tag; everything else renders as <p>
-const SEMANTIC_TAGS = { title: 'h1', ctrTitle: 'h1', subTitle: 'h2' };
+// placeholder ph.type -> heading level for renderText's titleLevel
+const TITLE_LEVELS = { title: 1, ctrTitle: 1, subTitle: 2 };
 
-function elementBox(el, rctx) {
+// buildTextBody ctx for one element: the phChain assembles by matching this
+// shape's placeholder in each under-layer's spTree (own node for its layer)
+function textCtx(el, rctx, slide) {
+  const ph = el.ph;
+  const layoutSpTree = slide?.layoutRoot?.path('p:cSld/p:spTree') ?? null;
+  const masterSpTree = slide?.masterRoot?.path('p:cSld/p:spTree') ?? null;
+  return {
+    theme: rctx.theme, diag: rctx.diag, slideIndex: rctx.slideIndex,
+    phChain: ph ? [
+      el.layer === 'slide' ? el.node : null,
+      el.layer === 'layout' ? el.node : matchPlaceholder(layoutSpTree, ph),
+      el.layer === 'master' ? el.node : matchPlaceholder(masterSpTree, ph),
+    ] : [null, null, null],
+    ph,
+    masterRoot: slide?.masterRoot ?? null,
+    defaultTextStyle: slide?.defaultTextStyle ?? null,
+    pkg: rctx.pkg, partName: rctx.partName,
+  };
+}
+
+function elementBox(el, rctx, slide) {
   const g = el.geom ?? { x: 0, y: 0, w: 0, h: 0, rot: 0 };
   let style = `left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px`;
   if (g.rot) style += `;transform:rotate(${g.rot / 60000}deg);transform-origin:center`;
@@ -23,9 +44,18 @@ function elementBox(el, rctx) {
   let inner;
   if (el.image) {
     inner = `<img class="pp-img" src="${rctx.url(el.image.partName)}" alt="" style="width:100%;height:100%;object-fit:fill">`;
+  } else if (el.kind === 'sp' || el.kind === 'cxnSp') {
+    // 01-04: the full txBody model + semantic render replace the 01-02
+    // concatenated text; title boxes become <h1>/<h2> via titleLevel
+    const txBody = el.node?.children.find(c => c.name === 'p:txBody') ?? null;
+    const body = txBody ? buildTextBody(txBody, textCtx(el, rctx, slide)) : null;
+    inner = body ? renderText(body, el, rctx, {
+      slideIndex: rctx.slideIndex,
+      slideCount: slide ? slide.index : null,
+      titleLevel: el.ph ? TITLE_LEVELS[el.ph.type] ?? 0 : 0,
+    }) : '';
   } else {
-    const tag = SEMANTIC_TAGS[el.ph?.type] ?? 'p';
-    inner = `<${tag} style="margin:0">${escapeXml(el.text ?? '')}</${tag}>`;
+    inner = '';
   }
   return `  <div class="pp-el" style="${style}">\n    ${svg ? svg + '\n    ' : ''}${inner}\n  </div>`;
 }
@@ -63,7 +93,7 @@ export function renderSlide(slide, rctx, opts = {}) {
   rctx.partName = slide.partName;
   rctx.slideIndex = slide.index;
   const bg = slideBackground(slide, rctx, opts);
-  const boxes = (slide.elements ?? []).map(el => elementBox(el, rctx));
+  const boxes = (slide.elements ?? []).map(el => elementBox(el, rctx, slide));
   return `<div class="pp-slide" data-slide-index="${slide.index}" role="group" aria-label="Slide ${slide.index}"${bg.styleAttr}>\n` +
     bg.svg + boxes.join('\n') + `\n</div>`;
 }

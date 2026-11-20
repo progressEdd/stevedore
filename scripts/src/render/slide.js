@@ -12,6 +12,8 @@ import { geometrySvg } from './shape.js';
 import { svgPaint } from './paint.js';
 import { renderText } from './text.js';
 import { renderTable } from './table.js';
+import { parseChart } from '../charts/parse.js';
+import { renderChart } from '../charts/render.js';
 
 // placeholder ph.type -> heading level for renderText's titleLevel
 const TITLE_LEVELS = { title: 1, ctrTitle: 1, subTitle: 2 };
@@ -90,6 +92,15 @@ function elementBox(el, rctx, slide, off = null) {
     // 01-05: a:tbl frames render as semantic tables inside the frame box
     // (the frame's p:xfrm positions this .pp-el)
     inner = renderTable(buildTable(el.node, frameParseCtx(el, rctx)), rctx);
+  } else if (el.kind === 'graphicFrame' && el.frameKind === 'chart' && el.chartPartName) {
+    // 01-05: minimal SVG charts from the cached series model + diagnostics
+    try {
+      const chart = parseChart(rctx.pkg.xml(el.chartPartName), frameParseCtx(el, rctx));
+      inner = renderChart(chart, rctx, { w: g.w, h: g.h });
+    } catch (err) {
+      rctx.diag.add('error', `failed to load chart ${el.chartPartName}: ${err.message}`, rctx.slideIndex ?? null);
+      inner = '';
+    }
   } else {
     inner = '';
   }

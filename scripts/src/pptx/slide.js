@@ -163,11 +163,22 @@ function frameElement(node, layer, ctx, tf) {
     else if (/ink/i.test(uri) || graphicData.find('p:ink')) frameKind = 'ink';
   }
   // only complain when it actually carries content we defer to later plans;
-  // tables render in 01-05, so they are no longer "later plan" content
+  // tables and charts render in 01-05, so they are no longer "later plan" content
   if (frameKind === 'oleObject' || frameKind === 'ink')
     ctx.diag.add('unsupported', `${frameKind === 'ink' ? 'ink' : 'OLE/ActiveX object'} not rendered`, ctx.slideIndex);
-  else if (frameKind && frameKind !== 'table')
+  else if (frameKind && frameKind !== 'table' && frameKind !== 'chart')
     ctx.diag.add('unsupported', 'graphicFrame content (later plan)', ctx.slideIndex);
+  let chartPartName = null;
+  if (frameKind === 'chart') {
+    // the chart (or chartEx) part behind this frame — resolved here where
+    // ctx.partName is the slide; render loads + parses + renders it
+    const rid = graphicData?.find(['c:chart', 'cx:chartEx'])?.attr('r:id');
+    const rel = rid ? ctx.pkg.rels(ctx.partName).find(r => r.id === rid) : null;
+    if (rel && !rel.external)
+      chartPartName = ctx.pkg.resolvePartName(ctx.partName, rel.target);
+    else
+      ctx.diag.add('missing', `chart rel ${rid ?? '?'} not found`, ctx.slideIndex);
+  }
   const el = {
     layer,
     kind: 'graphicFrame',
@@ -179,6 +190,7 @@ function frameElement(node, layer, ctx, tf) {
     text: '',
     image: null,
     node,
+    chartPartName,
   };
   return withTf(el, tf);
 }

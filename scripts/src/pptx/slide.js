@@ -162,12 +162,10 @@ function frameElement(node, layer, ctx, tf) {
     else if (graphicData.find('p:oleObj') || /ole/i.test(uri)) frameKind = 'oleObject';
     else if (/ink/i.test(uri) || graphicData.find('p:ink')) frameKind = 'ink';
   }
-  // only complain when it actually carries content we defer to later plans;
-  // tables and charts render in 01-05, so they are no longer "later plan" content
+  // graphicFrame diagnostics: only content this converter genuinely defers
+  // (OLE/ActiveX, ink) — tables, charts and SmartArt all render in 01-05
   if (frameKind === 'oleObject' || frameKind === 'ink')
     ctx.diag.add('unsupported', `${frameKind === 'ink' ? 'ink' : 'OLE/ActiveX object'} not rendered`, ctx.slideIndex);
-  else if (frameKind && frameKind !== 'table' && frameKind !== 'chart')
-    ctx.diag.add('unsupported', 'graphicFrame content (later plan)', ctx.slideIndex);
   let chartPartName = null;
   if (frameKind === 'chart') {
     // the chart (or chartEx) part behind this frame — resolved here where
@@ -255,6 +253,17 @@ function buildElement(node, layer, ctx, tf = null) {
   }
 }
 
+// walkSpTree(spTreeNode, ctx, layer) — the one element walker (01-05: shared
+// with the SmartArt pre-rendered-drawing path). Iterates an spTree's child
+// elements through the per-element dispatch above; ctx.partName decides
+// whose rels resolve r:embed (a diagram drawing carries its own).
+export function walkSpTree(spTreeNode, ctx, layer) {
+  if (!spTreeNode) return [];
+  const out = [];
+  for (const node of spTreeNode.children) out.push(...buildElement(node, layer, ctx));
+  return out;
+}
+
 export function buildSlide(sldRoot, ctx) {
   const { pkg, diag } = ctx;
 
@@ -300,21 +309,16 @@ export function buildSlide(sldRoot, ctx) {
   ctx.master = masterRoot ? { partName: masterName, root: masterRoot } : null;
 
   const elements = [];
-  const walk = (spTree, layer) => {
-    if (!spTree) return;
-    for (const node of spTree.children) elements.push(...buildElement(node, layer, ctx));
-  };
-
   // master spTree, then layout spTree, then slide spTree — skipping per
   // showMasterSp: the slide's "0" hides both underlayers; the layout's "0"
   // hides the master layer only.
   const slideHidesLayers = sldRoot.attr('showMasterSp') === '0';
   if (!slideHidesLayers) {
     const layoutHidesMaster = layoutRoot && layoutRoot.attr('showMasterSp') === '0';
-    if (masterRoot && !layoutHidesMaster) walk(masterRoot.path('p:cSld/p:spTree'), 'master');
-    if (layoutRoot) walk(layoutRoot.path('p:cSld/p:spTree'), 'layout');
+    if (masterRoot && !layoutHidesMaster) elements.push(...walkSpTree(masterRoot.path('p:cSld/p:spTree'), ctx, 'master'));
+    if (layoutRoot) elements.push(...walkSpTree(layoutRoot.path('p:cSld/p:spTree'), ctx, 'layout'));
   }
-  walk(sldRoot.path('p:cSld/p:spTree'), 'slide');
+  elements.push(...walkSpTree(sldRoot.path('p:cSld/p:spTree'), ctx, 'slide'));
 
   // chain inputs for the 01-04 text engine: the resolved layout/master roots
   // (already parsed, cached in the package) + presentation p:defaultTextStyle

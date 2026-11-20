@@ -14,6 +14,8 @@ import { renderText } from './text.js';
 import { renderTable } from './table.js';
 import { parseChart } from '../charts/parse.js';
 import { renderChart } from '../charts/render.js';
+import { buildSmartArt } from '../pptx/smartart.js';
+import { escapeXml } from '../util/xml.js';
 
 // placeholder ph.type -> heading level for renderText's titleLevel
 const TITLE_LEVELS = { title: 1, ctrTitle: 1, subTitle: 2 };
@@ -101,6 +103,16 @@ function elementBox(el, rctx, slide, off = null) {
       rctx.diag.add('error', `failed to load chart ${el.chartPartName}: ${err.message}`, rctx.slideIndex ?? null);
       inner = '';
     }
+  } else if (el.kind === 'graphicFrame' && el.frameKind === 'smartArt') {
+    // 01-05: pre-rendered dsp: drawing → real shapes inside the frame box;
+    // absent drawing → honest placeholder + unsupported diagnostic
+    const sm = buildSmartArt(el.node, frameParseCtx(el, rctx));
+    if (sm.elements.length) {
+      inner = renderElements(sm.elements, rctx, slide, { x: g.x, y: g.y });
+    } else {
+      inner = `<div class="pp-smartart-approx" style="border:1px dashed #999;display:flex;align-items:center;justify-content:center;height:100%;color:#666;font-style:italic">` +
+        `SmartArt: ${escapeXml(sm.title || 'diagram')} — layout engine deferred</div>`;
+    }
   } else {
     inner = '';
   }
@@ -137,21 +149,24 @@ function slideBackground(slide, rctx, opts) {
 // carrying the rotation — children keep their computed positions (their
 // left/top are offset so the container's origin cancels out). Non-rotated
 // groups need no wrapper: children are already remapped by the walker.
-function renderElements(elements, rctx, slide) {
+// off (01-05 SmartArt): an extra origin subtracted from every child box so
+// drawing-absolute coordinates render inside the frame's .pp-el box.
+function renderElements(elements, rctx, slide, off = null) {
   const out = [];
   let i = 0;
   while (i < elements.length) {
     const el = elements[i];
-    if (!el.groupId || !el.groupRot) { out.push(elementBox(el, rctx, slide)); i++; continue; }
+    if (!el.groupId || !el.groupRot) { out.push(elementBox(el, rctx, slide, off)); i++; continue; }
     let j = i;
     while (j < elements.length && elements[j].groupId === el.groupId) j++;
     const run = elements.slice(i, j);
-    const x = Math.min(...run.map(e => e.geom?.x ?? 0));
-    const y = Math.min(...run.map(e => e.geom?.y ?? 0));
-    const w = Math.max(...run.map(e => (e.geom?.x ?? 0) + (e.geom?.w ?? 0))) - x;
-    const h = Math.max(...run.map(e => (e.geom?.y ?? 0) + (e.geom?.h ?? 0))) - y;
+    const bx = off?.x ?? 0, by = off?.y ?? 0;
+    const x = Math.min(...run.map(e => e.geom?.x ?? 0)) - bx;
+    const y = Math.min(...run.map(e => e.geom?.y ?? 0)) - by;
+    const w = Math.max(...run.map(e => (e.geom?.x ?? 0) + (e.geom?.w ?? 0))) - x - bx;
+    const h = Math.max(...run.map(e => (e.geom?.y ?? 0) + (e.geom?.h ?? 0))) - y - by;
     out.push(`  <div class="pp-group" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:rotate(${el.groupRot / 60000}deg);transform-origin:center">` +
-      `\n${run.map(e => elementBox(e, rctx, slide, { x, y })).join('\n')}\n  </div>`);
+      `\n${run.map(e => elementBox(e, rctx, slide, { x: x + bx, y: y + by })).join('\n')}\n  </div>`);
     i = j;
   }
   return out;

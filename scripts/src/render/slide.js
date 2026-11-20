@@ -34,16 +34,37 @@ function textCtx(el, rctx, slide) {
   };
 }
 
-function elementBox(el, rctx, slide) {
+// srcRect l/t/r/b per-mille (0..1000). CSS object-position percentage p maps
+// so that p% of the container aligns with p% of the image; to show the crop
+// window [l, 1000-r] × [t, 1000-b]:
+//   const wl = 1000 - l - r, ht = 1000 - t - b;
+//   px = wl > 0 ? (l / wl) * 100 : 50;  py = ht > 0 ? (t / ht) * 100 : 50;
+// object-fit:cover scales the image so the crop window fills the box.
+function cropStyle(srcRect) {
+  const { l = 0, t = 0, r = 0, b = 0 } = srcRect ?? {};
+  const wl = 1000 - l - r, ht = 1000 - t - b;
+  const px = wl > 0 ? (l / wl) * 100 : 50;
+  const py = ht > 0 ? (t / ht) * 100 : 50;
+  return `width:100%;height:100%;object-fit:cover;object-position:${px}% ${py}%`;
+}
+
+function elementBox(el, rctx, slide, off = null) {
   const g = el.geom ?? { x: 0, y: 0, w: 0, h: 0, rot: 0 };
-  let style = `left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px`;
+  let style = `left:${g.x - (off?.x ?? 0)}px;top:${g.y - (off?.y ?? 0)}px;width:${g.w}px;height:${g.h}px`;
   if (g.rot) style += `;transform:rotate(${g.rot / 60000}deg);transform-origin:center`;
   // geometry SVG sits BEHIND the semantic text, filling the same box
   const svg = (el.kind === 'sp' || el.kind === 'cxnSp' || el.kind === 'graphicFrame')
     ? geometrySvg(el, rctx, `pp${rctx.slideIndex ?? 0}e${el.id}`) : '';
   let inner;
   if (el.image) {
-    inner = `<img class="pp-img" src="${rctx.url(el.image.partName)}" alt="" style="width:100%;height:100%;object-fit:fill">`;
+    if (el.image.unsupported) {
+      // decision 21 deferred tier: keep the box truthful, mark the gap
+      inner = `<div class="pp-img-deferred" style="width:100%;height:100%;border:2px dashed #999;display:flex;align-items:center;justify-content:center;color:#666">[image: EMF/WMF/TIFF deferred]</div>`;
+    } else {
+      const s = el.image.srcRect;
+      const cropped = s && (s.l || s.t || s.r || s.b);
+      inner = `<img class="pp-img" src="${rctx.url(el.image.partName)}" alt="" style="${cropped ? cropStyle(s) : 'width:100%;height:100%;object-fit:fill'}">`;
+    }
   } else if (el.kind === 'sp' || el.kind === 'cxnSp') {
     // 01-04: the full txBody model + semantic render replace the 01-02
     // concatenated text; title boxes become <h1>/<h2> via titleLevel
@@ -86,6 +107,30 @@ function slideBackground(slide, rctx, opts) {
   return { styleAttr: '', svg };
 }
 
+// contiguous children of one ROTATED group wrap in a single container div
+// carrying the rotation — children keep their computed positions (their
+// left/top are offset so the container's origin cancels out). Non-rotated
+// groups need no wrapper: children are already remapped by the walker.
+function renderElements(elements, rctx, slide) {
+  const out = [];
+  let i = 0;
+  while (i < elements.length) {
+    const el = elements[i];
+    if (!el.groupId || !el.groupRot) { out.push(elementBox(el, rctx, slide)); i++; continue; }
+    let j = i;
+    while (j < elements.length && elements[j].groupId === el.groupId) j++;
+    const run = elements.slice(i, j);
+    const x = Math.min(...run.map(e => e.geom?.x ?? 0));
+    const y = Math.min(...run.map(e => e.geom?.y ?? 0));
+    const w = Math.max(...run.map(e => (e.geom?.x ?? 0) + (e.geom?.w ?? 0))) - x;
+    const h = Math.max(...run.map(e => (e.geom?.y ?? 0) + (e.geom?.h ?? 0))) - y;
+    out.push(`  <div class="pp-group" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:rotate(${el.groupRot / 60000}deg);transform-origin:center">` +
+      `\n${run.map(e => elementBox(e, rctx, slide, { x, y })).join('\n')}\n  </div>`);
+    i = j;
+  }
+  return out;
+}
+
 export function renderSlide(slide, rctx, opts = {}) {
   if (slide.broken)
     return `<div class="pp-slide pp-broken">Slide ${slide.index} could not be read</div>`;
@@ -93,7 +138,7 @@ export function renderSlide(slide, rctx, opts = {}) {
   rctx.partName = slide.partName;
   rctx.slideIndex = slide.index;
   const bg = slideBackground(slide, rctx, opts);
-  const boxes = (slide.elements ?? []).map(el => elementBox(el, rctx, slide));
+  const boxes = renderElements(slide.elements ?? [], rctx, slide);
   return `<div class="pp-slide" data-slide-index="${slide.index}" role="group" aria-label="Slide ${slide.index}"${bg.styleAttr}>\n` +
     bg.svg + boxes.join('\n') + `\n</div>`;
 }

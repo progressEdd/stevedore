@@ -19,6 +19,7 @@ const CANON = {
   p14: ['http://schemas.microsoft.com/office/powerpoint/2010/main'],
   p15: ['http://schemas.microsoft.com/office/powerpoint/2012/main'],
   a14: ['http://schemas.microsoft.com/office/drawing/2010/main'],
+  asvg: ['http://schemas.microsoft.com/office/drawing/2016/SVG'],
   mc: ['http://schemas.openxmlformats.org/markup-compatibility/2006'],
 };
 const URI_TO_CANON = new Map(Object.entries(CANON).flatMap(([pfx, uris]) => uris.map(u => [u, pfx])));

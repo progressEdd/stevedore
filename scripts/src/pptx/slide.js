@@ -9,6 +9,8 @@
 //   layer 'master'|'layout'|'slide'; kind 'sp'|'pic'|'grpSp'|'graphicFrame'|'cxnSp';
 //   geom { x, y, w, h (px), rot (raw 60000ths deg) }; text concatenated a:t.
 
+import { XNode } from '../util/xml.js';
+
 const EMU_PER_PX = 9525;
 const px = (emu) => Math.round(emu / EMU_PER_PX);
 
@@ -64,20 +66,65 @@ function nvOf(node) { // the p:nv*Pr child (nvSpPr / nvPicPr / nvCxnSpPr / nvGrp
   return node.children.find(c => c.name.startsWith('p:nv')) ?? null;
 }
 
-function shapeElement(node, layer, ctx, kind) {
+// find the asvg:svgBlip r:embed anywhere under a:blip's extLst (the ext is
+// uri-gated, but any asvg:svgBlip descendant is the SVG part reference)
+function findSvgEmbed(node) {
+  for (const c of node.children) {
+    if (c.name === 'asvg:svgBlip') return c.attr('r:embed');
+    const found = findSvgEmbed(c);
+    if (found) return found;
+  }
+  return null;
+}
+
+// decision 21 deferred tier — placeholder + diagnostic, positions stay truthful
+const DEFERRED_IMAGE_MIMES = new Set(['image/x-emf', 'image/x-wmf', 'image/tiff']);
+
+function finishImage(image, node, ctx) {
+  // srcRect l/t/r/b: 0..100000 -> per-mille ints (0..1000), default 0
+  const s = node.path('p:blipFill/a:srcRect');
+  image.srcRect = s
+    ? { l: Math.round(s.num('l', 0) / 100), t: Math.round(s.num('t', 0) / 100),
+        r: Math.round(s.num('r', 0) / 100), b: Math.round(s.num('b', 0) / 100) }
+    : { l: 0, t: 0, r: 0, b: 0 };
+  const mime = ctx.pkg.mimeOf(image.partName);
+  if (DEFERRED_IMAGE_MIMES.has(mime)) {
+    ctx.diag.add('unsupported', `image part ${image.partName} (EMF/WMF/TIFF) conversion deferred to a later phase`, ctx.slideIndex);
+    image.unsupported = true;
+  }
+  return image;
+}
+
+function imageOf(node, ctx) {
+  const blip = node.path('p:blipFill/a:blip');
+  // prefer the SVG part over the raster fallback (a:extLst//asvg:svgBlip)
+  const embeds = [blip && findSvgEmbed(blip), blip?.attr('r:embed')].filter(Boolean);
+  for (const rid of embeds) {
+    const rel = ctx.pkg.rels(ctx.partName).find(r => r.id === rid);
+    if (rel && !rel.external)
+      return finishImage({ partName: ctx.pkg.resolvePartName(ctx.partName, rel.target) }, node, ctx);
+  }
+  if (embeds.length) ctx.diag.add('missing', `image rel ${embeds[0]} not found`, ctx.slideIndex);
+  return null;
+}
+
+function shapeElement(node, layer, ctx, kind, tf) {
   const nv = nvOf(node);
   const cnvPr = nv ? nv.find('p:cNvPr') : null;
   const phNode = nv ? nv.path('p:nvPr/p:ph') : null;
   let image = null;
-  if (kind === 'pic') {
-    const embed = node.path('p:blipFill/a:blip')?.attr('r:embed');
-    if (embed) {
-      const rel = ctx.pkg.rels(ctx.partName).find(r => r.id === embed);
-      if (rel && !rel.external) image = { partName: ctx.pkg.resolvePartName(ctx.partName, rel.target) };
-      else ctx.diag.add('missing', `image rel ${embed} not found`, ctx.slideIndex);
+  if (kind === 'pic') image = imageOf(node, ctx);
+  if (kind === 'cxnSp') {
+    // connectors default to line geometry when the producer omitted prstGeom
+    const spPr = node.find('p:spPr');
+    if (spPr && !spPr.find('a:prstGeom') && !spPr.find('a:custGeom')) {
+      const g = new XNode('a:prstGeom');
+      g.attrs = { prst: 'line' };
+      g.children.push(new XNode('a:avLst'));
+      spPr.children.push(g);
     }
   }
-  return {
+  const el = {
     layer,
     kind,
     id: cnvPr ? cnvPr.int('id', 0) : 0,
@@ -88,21 +135,39 @@ function shapeElement(node, layer, ctx, kind) {
     image,
     node, // raw element kept for the 01-03 styling engine (fills/geometry/lines)
   };
+  return withTf(el, tf);
 }
 
-function frameElement(node, layer, ctx) {
+// affine remap for group children: x' = dx + kx*x, w' = kx*w (in px)
+function withTf(el, tf) {
+  if (!tf) return el;
+  el.geom = { ...el.geom,
+    x: Math.round(tf.dx + tf.kx * el.geom.x),
+    y: Math.round(tf.dy + tf.ky * el.geom.y),
+    w: Math.round(tf.kx * el.geom.w),
+    h: Math.round(tf.ky * el.geom.h) };
+  return el;
+}
+
+function frameElement(node, layer, ctx, tf) {
   const nv = nvOf(node);
   const cnvPr = nv ? nv.find('p:cNvPr') : null;
   const graphicData = node.path('a:graphic/a:graphicData');
   let frameKind = null;
   if (graphicData) {
+    const uri = graphicData.attr('uri', '');
     if (graphicData.find('a:tbl')) frameKind = 'table';
     else if (graphicData.find(['c:chart', 'cx:chartEx'])) frameKind = 'chart';
     else if (graphicData.find(['dgm:relIds', 'dsp:dataModelExt'])) frameKind = 'smartArt';
+    else if (graphicData.find('p:oleObj') || /ole/i.test(uri)) frameKind = 'oleObject';
+    else if (/ink/i.test(uri) || graphicData.find('p:ink')) frameKind = 'ink';
   }
   // only complain when it actually carries content we defer to later plans
-  if (frameKind) ctx.diag.add('unsupported', 'graphicFrame content (later plan)', ctx.slideIndex);
-  return {
+  if (frameKind === 'oleObject' || frameKind === 'ink')
+    ctx.diag.add('unsupported', `${frameKind === 'ink' ? 'ink' : 'OLE/ActiveX object'} not rendered`, ctx.slideIndex);
+  else if (frameKind)
+    ctx.diag.add('unsupported', 'graphicFrame content (later plan)', ctx.slideIndex);
+  const el = {
     layer,
     kind: 'graphicFrame',
     frameKind,
@@ -114,34 +179,65 @@ function frameElement(node, layer, ctx) {
     image: null,
     node,
   };
+  return withTf(el, tf);
 }
 
-function groupElements(node, layer, ctx) {
-  const geom = geomOf(node, 'p:grpSpPr/a:xfrm', ctx); // the group's own a:off/a:ext
+let groupSeq = 0; // per-package group id counter (render groups runs by it)
+
+// p:grpSpPr/a:xfrm as an affine child-space -> slide-space map (px first):
+//   childX' = gx + (childX - cx) * (gw / cw)   =>   dx + kx * childX
+// chExt 0 guards to identity scale (kx = 1). Adapted from upstream.
+function groupTransform(node, ctx) {
+  const xfrm = node.path('p:grpSpPr/a:xfrm');
+  const pxOf = (el, k) => px(el ? el.int(k, 0) : 0);
+  const off = xfrm?.find('a:off'), ext = xfrm?.find('a:ext');
+  const chOff = xfrm?.find('a:chOff'), chExt = xfrm?.find('a:chExt');
+  const gw = pxOf(ext, 'cx'), gh = pxOf(ext, 'cy');
+  const cw = pxOf(chExt, 'cx'), ch = pxOf(chExt, 'cy');
+  const kx = cw > 0 ? gw / cw : 1;
+  const ky = ch > 0 ? gh / ch : 1;
+  return {
+    kx, ky,
+    dx: pxOf(off, 'x') - pxOf(chOff, 'x') * kx,
+    dy: pxOf(off, 'y') - pxOf(chOff, 'y') * ky,
+    rot: xfrm?.num('rot', 0) ?? 0,
+  };
+}
+
+// concatenate an inner group transform under an outer one: outer(inner(x))
+const composeTf = (outer, inner) => !outer ? inner : {
+  kx: outer.kx * inner.kx,
+  ky: outer.ky * inner.ky,
+  dx: outer.dx + outer.kx * inner.dx,
+  dy: outer.dy + outer.ky * inner.dy,
+  rot: inner.rot,
+};
+
+function groupElements(node, layer, ctx, tf) {
+  const t = groupTransform(node, ctx);
+  const composed = composeTf(tf, t);
+  const groupId = ++groupSeq;
   const out = [];
   for (const child of node.children) {
-    for (const el of buildElement(child, layer, ctx)) {
-      // offset children by the group's own a:off — full child-coordinate
-      // math (a:chOff/a:chExt scaling) arrives in 01-04
-      el.geom = { ...el.geom, x: el.geom.x + geom.x, y: el.geom.y + geom.y };
-      if (el.parentGeom == null) el.parentGeom = geom; // immediate parent group
+    for (const el of buildElement(child, layer, ctx, composed)) {
+      if (el.groupId == null) { el.groupId = groupId; el.groupRot = t.rot; } // innermost wins
       out.push(el);
     }
   }
   return out;
 }
 
-function buildElement(node, layer, ctx) {
+function buildElement(node, layer, ctx, tf = null) {
   if (node.name === 'mc:AlternateContent') {
     const chosen = chooseAlternate(node);
-    return chosen ? chosen.children.flatMap(c => buildElement(c, layer, ctx)) : [];
+    return chosen ? chosen.children.flatMap(c => buildElement(c, layer, ctx, tf)) : [];
   }
   switch (node.name) {
-    case 'p:sp': return [shapeElement(node, layer, ctx, 'sp')];
-    case 'p:cxnSp': return [shapeElement(node, layer, ctx, 'cxnSp')]; // line geometry, treated like sp
-    case 'p:pic': return [shapeElement(node, layer, ctx, 'pic')];
-    case 'p:graphicFrame': return [frameElement(node, layer, ctx)];
-    case 'p:grpSp': return groupElements(node, layer, ctx);
+    case 'p:sp': return [shapeElement(node, layer, ctx, 'sp', tf)];
+    case 'p:cxnSp': return [shapeElement(node, layer, ctx, 'cxnSp', tf)]; // line geometry, treated like sp
+    case 'p:pic': return [shapeElement(node, layer, ctx, 'pic', tf)];
+    case 'p:graphicFrame': return [frameElement(node, layer, ctx, tf)];
+    case 'p:grpSp': return groupElements(node, layer, ctx, tf);
     default: return []; // nvGrpSpPr / grpSpPr wrappers and unknown tags
   }
 }

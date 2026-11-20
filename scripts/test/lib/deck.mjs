@@ -109,6 +109,20 @@ function bgXml(spec) {
   return '';
 }
 
+function picXml(entry, id) {
+  const srcRect = entry.srcRect
+    ? `<a:srcRect l="${entry.srcRect.l ?? 0}" t="${entry.srcRect.t ?? 0}" r="${entry.srcRect.r ?? 0}" b="${entry.srcRect.b ?? 0}"/>` : '';
+  const blip = entry.svgRel
+    ? `<a:blip r:embed="${entry.rel}"><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}">` +
+      `<asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG" r:embed="${entry.svgRel}"/></a:ext></a:extLst></a:blip>`
+    : `<a:blip r:embed="${entry.rel}"/>`;
+  return `<p:pic><p:nvPicPr><p:cNvPr id="${id}" name="Picture ${id}"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>` +
+    `<p:blipFill>${blip}${srcRect}<a:stretch><a:fillRect/></a:stretch></p:blipFill>` +
+    `<p:spPr><a:xfrm><a:off x="${entry.x ?? 914400}" y="${entry.y ?? 914400}"/>` +
+    `<a:ext cx="${entry.cx ?? 1905000}" cy="${entry.cy ?? 1428750}"/></a:xfrm>` +
+    `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`;
+}
+
 function slideXml(spec) {
   const shapes = (spec.texts ?? []).map((entry, i) => {
     const id = i + 2; // spTree root cNvPr is id 1
@@ -119,13 +133,15 @@ function slideXml(spec) {
       `${spPrXml(entry, i)}` +
       `${txBodyXml(entry)}</p:sp>`;
   }).join('');
+  const pics = (spec.pictures ?? []).map((entry, i) =>
+    picXml(entry, (spec.texts?.length ?? 0) + i + 2)).join('');
   const show = spec.hidden ? ' show="0"' : '';
   return `${XML_DECL}
 <p:sld ${NS}${show}>
   <p:cSld>${bgXml(spec)}<p:spTree>
     <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
     <p:grpSpPr/>
-${shapes}
+${shapes}${pics}${spec.shapes ?? ''}
   </p:spTree></p:cSld>
 </p:sld>`;
 }
@@ -159,7 +175,7 @@ function themeXml(n) {
 
 // (slide .rels entries are composed per-slide in buildDeck: layout rel + spec.rels)
 
-export function buildDeck({ slides = [], masters = [], layouts = [], extraParts = [], advertiseMissing = [], defaultTextStyle = null }) {
+export function buildDeck({ slides = [], masters = [], layouts = [], extraParts = [], advertiseMissing = [], defaultTextStyle = null, ctDefaults = [] }) {
   const files = new Map(); // name -> data; extraParts replace/append by name
 
   const overrides = [`<Override PartName="/ppt/presentation.xml" ContentType="${CT_PRES}"/>`];
@@ -210,6 +226,7 @@ export function buildDeck({ slides = [], masters = [], layouts = [], extraParts 
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
 <Default Extension="xml" ContentType="application/xml"/>
 <Default Extension="png" ContentType="image/png"/>
+${ctDefaults.map(d => `<Default Extension="${d.ext}" ContentType="${d.mime}"/>`).join('\n')}
 ${overrides.join('\n')}
 </Types>`);
   files.set('_rels/.rels', `${XML_DECL}

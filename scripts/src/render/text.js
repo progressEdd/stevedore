@@ -126,8 +126,14 @@ function runSpan(run, textBody, rctx, opts) {
   if (r.link) {
     if (r.link.url && safeUrl(r.link.url))
       return `<a href="${escapeXml(r.link.url)}"${r.link.url.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${span}</a>`;
-    if (r.link.url)
-      rctx.diag.addOnce('approx', `hyperlink scheme not allowed (${new URL(r.link.url).protocol})`, rctx.slideIndex ?? null);
+    if (r.link.url) {
+      // rel targets can be relative or unparsable (PPTX2HTML sample.pptx slide 19
+      // carries a hyperlink Target="test/%5bContent_Types%5d.xml") — new URL throws
+      // on those, which must never take the slide down with it
+      let scheme = '(unparsable URL)';
+      try { scheme = new URL(r.link.url).protocol; } catch { /* keep placeholder */ }
+      rctx.diag.addOnce('approx', `hyperlink scheme not allowed (${scheme})`, rctx.slideIndex ?? null);
+    }
     else
       rctx.diag.addOnce('approx', 'internal slide hyperlink rendered as text', rctx.slideIndex ?? null);
   }

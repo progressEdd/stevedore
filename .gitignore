@@ -21,6 +21,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# scripts/test/lib is the pptx fixture builder (source, not compiled output) — shippEdd 01-02
+!scripts/test/lib/
 parts/
 sdist/
 var/

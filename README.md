@@ -1,23 +1,45 @@
 # stevedore — `.pptx` → HTML agent skill
 
-An agent skill that converts PowerPoint decks to native HTML/CSS — our own zero-dependency
-Node implementation (no `npm install`, bare `node`), the inverse of
-[dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx).
+Converts PowerPoint decks to self-contained HTML with a zero-dependency
+Node CLI — the inverse of dom-to-pptx. The reverse direction (`html-to-pptx`)
+is reserved for a later phase.
 
-## Install (git subtree)
+## Convert a deck (zero dependencies)
+
+Requires Node ≥ 18. No npm install — ever:
+
+    node scripts/pptx-to-html.js path/to/deck.pptx -o deck.html
+
+Options: `--split` (per-slide folder + index.html), `--slides 1,3-5`,
+`--strict` (fail on any diagnostic), `-q`. Diagnostics print to stderr and
+list every approximated or deferred feature. See `reference/usage.md`.
+
+## Install into your repo (git subtree)
 
     git subtree add --prefix=.agents/skills/stevedore https://github.com/progressEdd/stevedore.git stevedore --squash
 
-## Run
+Then convert with `node .agents/skills/stevedore/scripts/pptx-to-html.js deck.pptx`.
+Pull updates with `git subtree pull --prefix=.agents/skills/stevedore <url> stevedore`.
 
-    node .agents/skills/stevedore/scripts/pptx-to-html.js deck.pptx -o deck.html
+## Layout
 
+- `SKILL.md` — the agent skill (this repo/branch IS the skill folder)
 - `scripts/pptx-to-html.js` — the CLI
-- `scripts/src/` — the converter library (zero-dep: `node:` built-ins only)
-- `scripts/test/` — test suite (`node --test scripts/test/`)
+- `scripts/src/` — converter library: `opc/` (zip+content-types+rels), `pptx/` (model builders), `geometry/`, `charts/`, `render/` (string emitters), `util/`
+- `scripts/test/` — `node --test` suites; fixtures are generated, not committed binaries
+- `scripts/examples/` — worked example: real 20-slide deck + its converted HTML
+- `reference/` — skill reference docs (usage, fidelity, validation)
 
-Reverse direction (`skills/html-to-pptx/`) is reserved for a later phase.
+## Credits
 
-Credits: logic adapted from [PPTX2HTML](https://github.com/g21589/PPTX2HTML) (`c8a96eb`) and
-[dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx) (`v2.1.2`) — both MIT — is credited
-where used.
+This is our own implementation. Logic in specific spots is adapted from —
+and credited inline in the source next to — these MIT-licensed references:
+
+- [PPTX2HTML](https://github.com/g21589/PPTX2HTML) (commit c8a96eb) —
+  architecture mirror (opc/pptx/render), diagnostics design, color/geometry
+  approaches.
+- [dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx) (v2.1.2) —
+  skill conventions (SKILL.md shape, reference docs), and its output decks
+  are the primary compatibility target.
+
+License: GPL-2.0-only (see LICENSE).

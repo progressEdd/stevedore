@@ -1,0 +1,7 @@
+{
+  "name": "stevedore",
+  "private": true,
+  "type": "module",
+  "description": "pptx to HTML converter skills — zero-dep, consumed via git subtree",
+  "license": "GPL-2.0-only"
+}

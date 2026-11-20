@@ -7,8 +7,7 @@
 import { escapeXml } from '../util/xml.js';
 import { renderSlide } from './slide.js';
 
-// per-slide data embed (01-06): the parsed p:timing + p:transition ride
-// the slide div as JSON inside <script type="application/json"> — data for
+// per-slide data embed (01-06): the parsed p:timing + p:transition ride// the slide div as JSON inside <script type="application/json"> — data for
 // a future player, never a runtime (decision 22). JSON.stringify output is
 // made HTML-safe: '<' would close the script context, so it is escaped.
 function timingJsonScript(slide) {
@@ -17,13 +16,36 @@ function timingJsonScript(slide) {
   return `<script type="application/json" class="pp-timing-json">${json}</script>`;
 }
 
+// <title> fallback chain (01-06): dc:title, else the first title-placeholder
+// text of the first slide, else 'Deck'. Whitespace collapses — a <title> is
+// one line even when the placeholder wraps paragraphs.
+export function documentTitle(presentation) {
+  if (presentation.title) return presentation.title;
+  const el = presentation.slides?.[0]?.elements?.find(
+    e => e.ph && (e.ph.type === 'title' || e.ph.type === 'ctrTitle') && e.text && e.text.trim() !== '');
+  return el ? el.text.trim().replace(/\s+/g, ' ') : 'Deck';
+}
+
 // insert per-slide data as the last children of the rendered .pp-slide div
 // (broken-slide divs get the same decoration — every emitted slide carries
 // its data). Exported: the 01-06 split renderer reuses this verbatim.
-export function decorateSlideHtml(html, slide) {
-  const close = html.lastIndexOf('</div>');
-  if (close < 0) return html;
-  return html.slice(0, close) + timingJsonScript(slide) + '\n' + html.slice(close);
+// Hidden slides (01-06): kept in the file but flagged — data-hidden="true"
+// + the HTML hidden attribute (display:none via BASE_CSS); split mode opts
+// out of the hidden attribute with { hiddenAttr: false } so a hidden slide
+// still shows when its own page is opened directly, flag intact.
+export function decorateSlideHtml(html, slide, opts = {}) {
+  let out = html;
+  if (slide.hidden && out.startsWith('<div class="pp-slide"')) {
+    const flag = ' data-hidden="true"' + (opts.hiddenAttr === false ? '' : ' hidden');
+    out = '<div class="pp-slide"' + flag + out.slice('<div class="pp-slide"'.length);
+  }
+  const close = out.lastIndexOf('</div>');
+  if (close < 0) return out;
+  const tail = [];
+  if (slide.notes != null)
+    tail.push(`<aside class="pp-notes" hidden>${escapeXml(slide.notes)}</aside>`);
+  tail.push(timingJsonScript(slide));
+  return out.slice(0, close) + tail.join('') + '\n' + out.slice(close);
 }
 
 export function renderDocument(presentation, rctx, opts = {}) {
@@ -40,7 +62,14 @@ export function renderDocument(presentation, rctx, opts = {}) {
       return `<div class="pp-slide pp-broken">Slide ${slide.index} could not be read</div>`;
     }
   }).join('\n');
-  const title = escapeXml(presentation.title || 'Deck');
+  // document-level sections data (01-06): one script per document, same
+  // '<'-escaping rule as the per-slide timing JSON
+  const sectionsJson = presentation.sections?.length
+    ? `\n<script type="application/json" class="pp-sections-json">${
+        JSON.stringify(presentation.sections.map(s => ({ name: s.name, slides: s.slides })))
+          .replace(/</g, '\\u003c')}</script>`
+    : '';
+  const title = escapeXml(documentTitle(presentation));
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -57,12 +86,13 @@ body { margin: 0; background: #1a1a1a; }
   transform-origin: top center; transform: scale(var(--pp-k, 1)); }
 .pp-el { position: absolute; }
 .pp-slide img { max-width: none; }
+.pp-slide[hidden]{display:none}
 </style>
 </head>
 <body>
 <div class="pp-viewport">
 ${slides}
-</div>
+</div>${sectionsJson}
 <script>
 (function () {
   var fit = function () {

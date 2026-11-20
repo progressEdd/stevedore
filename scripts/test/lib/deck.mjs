@@ -24,6 +24,8 @@ const CT_PRES = 'application/vnd.openxmlformats-officedocument.presentationml.pr
 const CT_SLIDE = 'application/vnd.openxmlformats-officedocument.presentationml.slide+xml';
 const CT_MASTER = 'application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml';
 const CT_LAYOUT = 'application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml';
+const CT_NOTES = 'application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml';
+const REL_NOTES = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide';
 
 // Slide XML — exact template; later tests depend on its shape. One p:sp per
 // entry in slide.texts (cNvPr id increments, optional <p:ph type="title"/>).
@@ -123,6 +125,21 @@ function picXml(entry, id) {
     `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`;
 }
 
+// notesSlide part (01-06): sldImg + body + sldNum placeholders — only the
+// body placeholder's text is notes; the sldNum fld must never leak in
+function notesXml(paras) {
+  const body = paras.map(p => `<a:p><a:r><a:rPr lang="en-US" dirty="0"/><a:t>${escapeXml(p)}</a:t></a:r></a:p>`).join('');
+  return `${XML_DECL}
+<p:notes ${NS}>
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
+    <p:sp><p:nvSpPr><p:cNvPr id="2" name="Slide Image Placeholder 1"/><p:cNvSpPr/><p:nvPr><p:ph type="sldImg"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/></p:txBody></p:sp>
+    <p:sp><p:nvSpPr><p:cNvPr id="3" name="Notes Placeholder 2"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/>${body}</p:txBody></p:sp>
+    <p:sp><p:nvSpPr><p:cNvPr id="4" name="Slide Number Placeholder 3"/><p:cNvSpPr/><p:nvPr><p:ph type="sldNum" sz="quarter" idx="10"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:fld id="{3C3BF2AC-BA61-4360-8A5C-54733A427FAD}" type="slidenum"><a:rPr lang="en-US" dirty="0"/><a:t>1</a:t></a:fld></a:p></p:txBody></p:sp>
+  </p:spTree></p:cSld>
+</p:notes>`;
+}
+
 function slideXml(spec) {
   const shapes = (spec.texts ?? []).map((entry, i) => {
     const id = i + 2; // spTree root cNvPr is id 1
@@ -178,7 +195,7 @@ function themeXml(n) {
 
 // (slide .rels entries are composed per-slide in buildDeck: layout rel + spec.rels)
 
-export function buildDeck({ slides = [], masters = [], layouts = [], extraParts = [], advertiseMissing = [], defaultTextStyle = null, ctDefaults = [] }) {
+export function buildDeck({ slides = [], masters = [], layouts = [], extraParts = [], advertiseMissing = [], defaultTextStyle = null, sections = [], ctDefaults = [] }) {
   const files = new Map(); // name -> data; extraParts replace/append by name
 
   const overrides = [`<Override PartName="/ppt/presentation.xml" ContentType="${CT_PRES}"/>`];
@@ -196,6 +213,12 @@ export function buildDeck({ slides = [], masters = [], layouts = [], extraParts 
       slideRelEntries.push(`<Relationship Id="rIdLayout" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout${(spec.layout ?? 0) + 1}.xml"/>`);
     for (const r of spec.rels ?? [])
       slideRelEntries.push(`<Relationship Id="${r.id}" Type="${r.type ?? hyperlinkRel}" Target="${escapeXml(r.target)}"${r.external ? ' TargetMode="External"' : ''}/>`);
+    if (spec.notes) { // 01-06: notesSlide part rel'd from this slide
+      const paras = Array.isArray(spec.notes) ? spec.notes : [spec.notes];
+      files.set(`ppt/notesSlides/notesSlide${n}.xml`, notesXml(paras));
+      slideRelEntries.push(`<Relationship Id="rNotes${n}" Type="${REL_NOTES}" Target="../notesSlides/notesSlide${n}.xml"/>`);
+      overrides.push(`<Override PartName="/ppt/notesSlides/notesSlide${n}.xml" ContentType="${CT_NOTES}"/>`);
+    }
     files.set(`ppt/slides/_rels/slide${n}.xml.rels`, `${XML_DECL}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${slideRelEntries.join('')}</Relationships>`);
     overrides.push(`<Override PartName="/ppt/slides/slide${n}.xml" ContentType="${CT_SLIDE}"/>`);
@@ -239,7 +262,8 @@ ${overrides.join('\n')}
   files.set('ppt/presentation.xml', `${XML_DECL}
 <p:presentation ${NS}>
 ${masterIds ? `  <p:sldMasterIdLst>${masterIds}</p:sldMasterIdLst>\n` : ''}  <p:sldSz cx="12192000" cy="6858000"/>
-  <p:sldIdLst>${slideIds}</p:sldIdLst>${defaultTextStyle ? `\n  <p:defaultTextStyle>${defaultTextStyle}</p:defaultTextStyle>` : ''}
+  <p:sldIdLst>${slideIds}</p:sldIdLst>${defaultTextStyle ? `\n  <p:defaultTextStyle>${defaultTextStyle}</p:defaultTextStyle>` : ''}${sections.length ? `\n  <p:extLst><p:ext uri="{521415D9-36F7-43E2-AB2F-B90AF26B5E84}"><p14:sectionLst xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main">${sections.map((s, i) =>
+    `<p:section name="${escapeXml(s.name)}" id="{521415D9-36F7-43E2-AB2F-B90AF26B5E${String(40 + i).padStart(2, '0')}}"><p:sldLst>${s.slides.map(m => `<p:sldRef r:id="rSlide${m}"/>`).join('')}</p:sldLst></p:section>`).join('')}</p14:sectionLst></p:ext></p:extLst>` : ''}
 </p:presentation>`);
   files.set('ppt/_rels/presentation.xml.rels', `${XML_DECL}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">

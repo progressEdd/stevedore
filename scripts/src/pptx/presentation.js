@@ -17,6 +17,17 @@ function findByLocal(node, local) {
   return node.children.find(c => c.name.endsWith(':' + local) || c.name === local) ?? null;
 }
 
+// first descendant with the canonical name (p14:sectionLst hides under
+// p:extLst/p:ext at arbitrary depth — "ext//sectionLst" in the plan text)
+function findDescendant(node, name) {
+  for (const c of node.children) {
+    if (c.name === name) return c;
+    const found = findDescendant(c, name);
+    if (found) return found;
+  }
+  return null;
+}
+
 export function loadPresentation(pkg, diag) {
   const mainPart = pkg.mainPart();
   const presRoot = pkg.xml(mainPart); // p:presentation (root element)
@@ -27,6 +38,7 @@ export function loadPresentation(pkg, diag) {
     masters: [],         // from p:sldMasterIdLst; empty array tolerated, never assumed
     title: '',           // docProps/core.xml dc:title (core.xml optional)
     theme: null,         // first master's theme part name; 'missing' diagnostic when absent
+    sections: [],        // p14:sectionLst (01-06): [{ name, slideIds, slides }] — slides are 1-based indices
   };
 
   // 1. slide size — the `type` attr is ignored; scale math handles any aspect
@@ -68,10 +80,12 @@ export function loadPresentation(pkg, diag) {
   // placeholders; numbering stays aligned; the deck always converts.
   const sldIdLst = presRoot.find('p:sldIdLst');
   const sldIds = sldIdLst ? sldIdLst.all('p:sldId') : [];
+  const ridToIndex = new Map(); // presentation r:id -> 1-based slide index (section resolution)
   let index = 0;
   for (const sldId of sldIds) {
     index++;
     const rid = sldId.attr('r:id');
+    ridToIndex.set(rid, index);
     const rel = pkg.rels(mainPart).find(r => r.id === rid);
     const name = rel && !rel.external
       ? pkg.resolvePartName(mainPart, rel.target)
@@ -98,6 +112,27 @@ export function loadPresentation(pkg, diag) {
       const title = findByLocal(pkg.xml('docProps/core.xml'), 'title');
       presentation.title = title ? title.textOf().trim() : '';
     } catch { presentation.title = ''; }
+  }
+
+  // 5. sections (01-06) — p:presentation/p:extLst/p:ext//p14:sectionLst;
+  // each p:section keeps its raw r:id list (slideIds, in order) plus the
+  // resolved 1-based slide indices (slides). Unresolvable r:ids are skipped
+  // (tolerated), never fatal.
+  const extLst = presRoot.find('p:extLst');
+  if (extLst) {
+    for (const ext of extLst.all('p:ext')) {
+      const sectionLst = findDescendant(ext, 'p14:sectionLst');
+      if (!sectionLst) continue;
+      for (const section of sectionLst.all('p:section')) {
+        const slideIds = (section.path('p:sldLst')?.all('p:sldRef') ?? []).map(r => r.attr('r:id'));
+        presentation.sections.push({
+          name: section.attr('name', ''),
+          slideIds,
+          slides: slideIds.map(rid => ridToIndex.get(rid) ?? null).filter(i => i !== null),
+        });
+      }
+      break; // one sectionLst per presentation
+    }
   }
 
   return presentation;

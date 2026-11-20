@@ -67,6 +67,30 @@ function textOfBody(el) {
 function nvOf(node) { // the p:nv*Pr child (nvSpPr / nvPicPr / nvCxnSpPr / nvGrpSpPr / nvGraphicFramePr)
   return node.children.find(c => c.name.startsWith('p:nv')) ?? null;
 }
+// notes extraction (01-06): the slide part's rels -> notesSlide type ->
+// part; the notes BODY placeholder(s)' a:t concatenated (paragraph breaks
+// become '\n', multiple body shapes join likewise), trimmed. Absent
+// notesSlide -> null; sldImg/sldNum placeholders never contribute text.
+function notesOf(ctx) {
+  const rel = ctx.pkg.relBy('notesSlide', ctx.partName);
+  if (!rel || rel.external) return null;
+  const name = ctx.pkg.resolvePartName(ctx.partName, rel.target);
+  if (!ctx.pkg.has(name)) {
+    ctx.diag.add('missing', `notesSlide part ${name} not in package`, ctx.slideIndex);
+    return null;
+  }
+  try {
+    const texts = (ctx.pkg.xml(name).path('p:cSld/p:spTree')?.all('p:sp') ?? [])
+      .filter(sp => sp.path('p:nvSpPr/p:nvPr/p:ph')?.attr('type') === 'body')
+      .map(textOfBody)
+      .filter(t => t !== '');
+    const joined = texts.join('\n').trim();
+    return joined === '' ? null : joined;
+  } catch (err) {
+    ctx.diag.add('error', `failed to load notes ${name}: ${err.message}`, ctx.slideIndex);
+    return null;
+  }
+}
 
 // find the asvg:svgBlip r:embed anywhere under a:blip's extLst (the ext is
 // uri-gated, but any asvg:svgBlip descendant is the SVG part reference)
@@ -330,7 +354,8 @@ export function buildSlide(sldRoot, ctx) {
   // 01-06 decision 22: timing + transition parse to plain JSON embedded per
   // slide — data for a future player, never a runtime (parse yes, player no)
   return {
-    background, elements, notes: null,
+    background, elements,
+    notes: notesOf(ctx),
     timing: parseTiming(sldRoot.find('p:timing'), ctx),
     transition: parseTransition(sldRoot, ctx),
     layoutRoot, masterRoot, defaultTextStyle,

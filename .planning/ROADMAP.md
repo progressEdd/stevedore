@@ -27,14 +27,14 @@
   3. The conversion code is our own implementation, not vendored PPTX2HTML source
 
 Plans:
-- [ ] 01-01: Zero-dep foundation — ZIP reader, XML light DOM, OPC package
-- [ ] 01-02: Minimal end-to-end pipeline — model, renderer, CLI
-- [ ] 01-03: Styling engine — theme, colors, fills, geometry
-- [ ] 01-04: Text engine, media, groups
-- [ ] 01-05: Tables, charts, SmartArt
-- [ ] 01-06: Timing JSON, notes, --split mode
-- [ ] 01-07: Round-trip verification + hardening
-- [ ] 01-08: Skills layer, examples, subtree proof, README + credits
+- [x] 01-01: Zero-dep foundation — ZIP reader, XML light DOM, OPC package
+- [x] 01-02: Minimal end-to-end pipeline — model, renderer, CLI
+- [x] 01-03: Styling engine — theme, colors, fills, geometry
+- [x] 01-04: Text engine, media, groups
+- [x] 01-05: Tables, charts, SmartArt
+- [x] 01-06: Timing JSON, notes, --split mode
+- [x] 01-07: Round-trip verification + hardening
+- [x] 01-08: Skills layer, examples, subtree proof, README + credits
 
 ### Phase 02: <slug>
 

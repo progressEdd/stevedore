@@ -207,5 +207,10 @@ export function buildSlide(sldRoot, ctx) {
   }
   walk(sldRoot.path('p:cSld/p:spTree'), 'slide');
 
-  return { background, elements, notes: null };
+  // chain inputs for the 01-04 text engine: the resolved layout/master roots
+  // (already parsed, cached in the package) + presentation p:defaultTextStyle
+  let defaultTextStyle = null;
+  try { defaultTextStyle = pkg.xml(pkg.mainPart()).find('p:defaultTextStyle') ?? null; } catch { /* tolerated */ }
+
+  return { background, elements, notes: null, layoutRoot, masterRoot, defaultTextStyle };
 }

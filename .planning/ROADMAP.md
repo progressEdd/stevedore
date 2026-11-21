@@ -6,11 +6,11 @@
 
 ## Next up
 
-**⏭️ 01-pptx-to-html** — an agent skill converting `.pptx` → HTML (our own implementation, PPTX2HTML as reference), on a clean `stevedore` branch. Planned — run it with `/skill:implement`.
+**none — roadmap complete**
 
 ## Phases
 
-- [ ] **Phase 01: pptx-to-html** — an agent skill that converts `.pptx` decks to HTML — our own implementation (PPTX2HTML as reference), living on a clean `stevedore` branch, consumed via git subtree
+- [x] **Phase 01: pptx-to-html** — an agent skill that converts `.pptx` decks to HTML — our own implementation (PPTX2HTML as reference), living on a clean `stevedore` branch, consumed via git subtree
 - [ ] **Phase 02: <slug>** — <one-line description>
 - [ ] **Phase 03: <slug>** — <one-line description>
 
@@ -51,7 +51,7 @@ Plans:
 
 | Phase | Plans complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 01 `pptx-to-html` | 0/8 | Planned | — |
+| 01 `pptx-to-html` | 8/8 | Shipped | 2026-11-20 |
 | 02 `<slug>` | 0/1 | Not started | — |
 
 <!--

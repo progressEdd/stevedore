@@ -16,6 +16,10 @@
 // Usage: node scripts/export-slides.mjs <deck.html> -o <outdir>
 //          [--selector <css>] [--width 1280] [--height 720]
 // Selector auto-detect: `.pp-slide` if the deck has one, else `section`.
+//
+// Determinism = fixed tool + fixed viewport + fixed flags; it does NOT
+// promise byte-identical PNGs across runs (chromium antialiasing may vary) —
+// never gate on byte equality.
 
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -71,6 +75,18 @@ async function main() {
     const page = await context.newPage();
     await page.goto(pathToFileURL(resolve(args.html)).href, { waitUntil: 'networkidle' });
     await page.evaluate(() => document.fonts.ready);   // webfonts settle before capture
+    // Capture-mode flatten: both deck shapes ship presentation chrome that
+    // fights element capture at a fixed viewport. The Marp bespoke viewer
+    // hides inactive slides (opacity:0, content-visibility:hidden, absolute
+    // stacking) and paints on-screen controls; our converter's fit-scaler
+    // shrinks slides to the browser window (scale(var(--pp-k)) + margins).
+    // Neutralize both so every slide renders as a plain viewport-sized box —
+    // each rule only matches its own deck shape (no-op on the other side).
+    await page.addStyleTag({ content: `
+      svg[data-marpit-svg]{position:static!important;opacity:1!important;content-visibility:visible!important;z-index:auto!important;pointer-events:auto!important}
+      .bespoke-marp-osc{display:none!important}
+      .pp-slide{transform:none!important;margin:0!important}
+    ` });
     const selector = args.selector ?? await page.evaluate(() =>
       document.querySelector('.pp-slide') ? '.pp-slide' : 'section');
     const els = await page.locator(selector).all();

@@ -25,6 +25,7 @@ Pull updates with `git subtree pull --prefix=.agents/skills/stevedore <url> stev
 
 - `SKILL.md` — the agent skill (this repo/branch IS the skill folder)
 - `scripts/pptx-to-html.js` — the CLI
+- `scripts/export-slides.mjs` — deterministic per-slide PNG export of any HTML deck (Marp `section` or `.pp-slide`), 1280×720; playwright-driven (decision 13), pointed at nix chromium via `executablePath` — runs under `nix shell nixpkgs#chromium` with `STEVEDORE_CHROMIUM_PATH` set (see `scripts/setup-roundtrip.sh`)
 - `scripts/src/` — converter library: `opc/` (zip+content-types+rels), `pptx/` (model builders), `geometry/`, `charts/`, `render/` (string emitters), `util/`
 - `scripts/test/` — `node --test` suites; fixtures are generated, not committed binaries
 - `scripts/examples/` — worked example: real 20-slide deck + its converted HTML

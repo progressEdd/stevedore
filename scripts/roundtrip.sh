@@ -3,7 +3,7 @@
 # tool cloning: tools are vendored; only outputs are scratch).
 # Usage: scripts/roundtrip.sh <source.html> <outdir>
 # Stages: html → pptx (vendor/dom-to-pptx, nix chromium) → html (our converter)
-#         [→ per-slide PNG exports of both sides — added by plan 02-03]
+#         → PNG exports of both sides (deterministic exporter, plan 02-03)
 #         → comparator (scripts/compare-decks.mjs).
 # Run scripts/setup-roundtrip.sh once first.
 set -euo pipefail
@@ -26,6 +26,12 @@ nix shell nixpkgs#chromium --command bash -c \
 
 echo "== pptx -> html (stevedore converter) =="
 node "$ROOT/scripts/pptx-to-html.js" "$PPTX" -o "$RT"
+
+echo "== export PNGs (both sides, deterministic exporter) =="
+nix shell nixpkgs#chromium --command bash -c \
+  "STEVEDORE_CHROMIUM_PATH=\$(command -v chromium) node '$ROOT/scripts/export-slides.mjs' '$SRC' -o '$OUT/exports/reference'"
+nix shell nixpkgs#chromium --command bash -c \
+  "STEVEDORE_CHROMIUM_PATH=\$(command -v chromium) node '$ROOT/scripts/export-slides.mjs' '$RT' -o '$OUT/exports/roundtrip'"
 
 echo "== compare =="
 if node "$ROOT/scripts/compare-decks.mjs" "$SRC" "$RT"; then

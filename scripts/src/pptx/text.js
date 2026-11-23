@@ -38,9 +38,9 @@ const HUNDREDTHS_PT_TO_PX = 96 / 72 / 100;
 // value wins per property; more general levels fill the gaps.
 export function mergeProps(levels) {
   const out = {};
-  for (let i = levels.length - 1; i >= 0; i--) {
+  for (let i = levels.length - 1; i >= 0; i--) {                            // most specific first
     for (const [k, v] of Object.entries(levels[i] ?? {})) {
-      if (v !== undefined) out[k] = v;
+      if (v !== undefined && out[k] === undefined) out[k] = v;              // (02-02) first set wins
     }
   }
   return out;

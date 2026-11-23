@@ -10,7 +10,7 @@ import { OpcPackage } from '../src/opc/package.js';
 import { loadPresentation } from '../src/pptx/presentation.js';
 import { loadTheme } from '../src/pptx/theme.js';
 import { Diagnostics } from '../src/pptx/context.js';
-import { buildTextBody, matchPlaceholder } from '../src/pptx/text.js';
+import { buildTextBody, matchPlaceholder, mergeProps } from '../src/pptx/text.js';
 import { mapSymbol } from '../src/pptx/symbols.js';
 import { buildDeck } from './lib/deck.mjs';
 
@@ -275,4 +275,36 @@ test('unmapped symbol code passes through with one addOnce approx diagnostic', (
   assert.equal(hits.length, 1, 'addOnce dedupes');
   assert.equal(hits[0].kind, 'approx');
   assert.equal(hits[0].slide, 3);
+});
+
+test('mergeProps: most specific level wins — cascade inversion regression (02-02)', () => {
+  assert.deepEqual(mergeProps([{ sz: 24 }, {}, { sz: 19 }]), { sz: 19 });
+  assert.deepEqual(
+    mergeProps([{ font: { latin: '+mn-lt' } }, { font: { latin: '-apple-system' } }]),
+    { font: { latin: '-apple-system' } });
+  assert.deepEqual(
+    mergeProps([{ bullet: { type: 'char', char: '•' } }, { bullet: { type: 'none' } }]),
+    { bullet: { type: 'none' } }); // specific buNone still defuses inherited buChar
+});
+
+test('defaultTextStyle fills gaps only — run a:rPr wins over presentation defaults (02-02)', () => {
+  const base = load({
+    defaultTextStyle:
+      '<a:lvl1pPr><a:defRPr sz="1800"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill>' +
+      '<a:latin typeface="+mn-lt"/></a:defRPr></a:lvl1pPr>',
+    slides: [{
+      rels: [],
+      texts: [{ paragraphs: [{ runs: [{
+        t: 'styled',
+        rPr: '<a:rPr sz="1414" b="1"><a:solidFill><a:srgbClr val="1F2328"/></a:solidFill>' +
+             '<a:latin typeface="-apple-system"/></a:rPr>',
+      }] }] }],
+    }],
+  });
+  const el = base.slide.elements.find(e => e.layer === 'slide');
+  const run = bodyOf(base, el).paragraphs[0].runs[0];
+  assert.equal(run.rPr.sz, 19);                     // 1414 hundredths-pt → 19 px (run beats default 24)
+  assert.equal(run.rPr.b, true);
+  assert.equal(run.rPr.font.latin, '-apple-system');
+  assert.equal(run.rPr.color, '#1f2328');           // resolved AFTER merge, from the run's own node
 });

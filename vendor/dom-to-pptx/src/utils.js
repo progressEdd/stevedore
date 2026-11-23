@@ -916,9 +916,28 @@ export function getVisibleShadow(shadowStr, scale) {
  */
 export function generateGradientSVG(w, h, bgString, radius, border) {
   try {
-    const match = bgString.match(/linear-gradient\((.*)\)/);
-    if (!match) return null;
-    const content = match[1];
+    // Extract the FIRST complete linear-gradient(…) — balanced parens — so a
+    // multi-background string ("linear-gradient(…), linear-gradient(…)")
+    // serializes its top layer instead of smearing "…), linear-gradient(…"
+    // across stop colors (which produced stop-color="linear-gradient(to top").
+    const FN = 'linear-gradient(';
+    const start = bgString.indexOf(FN);
+    if (start < 0) return null;
+    let depth = 0;
+    let end = -1;
+    for (let i = start + FN.length; i < bgString.length; i++) {
+      const ch = bgString[i];
+      if (ch === '(') depth++;
+      else if (ch === ')') {
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+        depth--;
+      }
+    }
+    if (end < 0) return null;
+    const content = bgString.slice(start + FN.length, end);
 
     // Split by comma, ignoring commas inside parentheses (e.g. rgba())
     const parts = content.split(/,(?![^()]*\))/).map((p) => p.trim());
@@ -1001,6 +1020,12 @@ export function generateGradientSVG(w, h, bgString, radius, border) {
     let stopsXML = '';
     const stopParts = parts.slice(stopsStartIndex);
 
+    // A stop-color attribute must be a serializable CSS color. Anything else
+    // (a nested gradient that slipped through, var() refs, multi-word junk)
+    // is skipped — never serialized verbatim into the SVG.
+    const isSerializableColor = (c) =>
+      /^(#[0-9a-fA-F]{3,8}|rgba?\([\d.,\s%]+\)|hsla?\([\d.,\s%]+\)|[a-zA-Z]+)$/.test(c.trim());
+
     stopParts.forEach((part, idx) => {
       // Parse "Color Position" (e.g., "red 50%")
       // Regex looks for optional space + number + unit at the end of the string
@@ -1023,8 +1048,14 @@ export function generateGradientSVG(w, h, bgString, radius, border) {
         }
       }
 
+      if (!isSerializableColor(color)) return; // skip non-color stops
+
       stopsXML += `<stop offset="${offset}" stop-color="${color.trim()}" stop-opacity="${opacity}"/>`;
     });
+
+    // Fewer than two surviving stops is not a gradient — bail to the callers'
+    // no-image fallback rather than emit a broken one
+    if ((stopsXML.match(/<stop /g) || []).length < 2) return null;
 
     let strokeAttr = '';
     if (border) {

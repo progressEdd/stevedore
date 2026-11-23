@@ -15,6 +15,11 @@
     `addMedia({type:'video', data})` (mp4 part byte-exact, poster auto).
     Closes byte-exact media survival: raster, svg and mp4 all round-trip
     verbatim (plan 02-05, decision 9).
+  - fix/gradient-svg-stop — off v2.1.2; generateGradientSVG extracts the
+    first complete linear-gradient(…) by balanced parens (multi-background
+    strings previously smeared "), linear-gradient(to top" into a
+    stop-color attribute — slide 17's malformed image-17-2.svg) and skips
+    non-color stops, bailing when <2 survive.
 - Local deltas vs upstream v2.1.2: the union of the branches above
 - Excluded from this copy: node_modules/, dist/ (built by scripts/setup-roundtrip.sh), lockfiles
 - Synced: 2026-11-23 via scripts/vendor-sync.sh

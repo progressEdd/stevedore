@@ -113,8 +113,8 @@ function finishImage(image, node, ctx) {
     ? { l: Math.round(s.num('l', 0) / 100), t: Math.round(s.num('t', 0) / 100),
         r: Math.round(s.num('r', 0) / 100), b: Math.round(s.num('b', 0) / 100) }
     : { l: 0, t: 0, r: 0, b: 0 };
-  const mime = ctx.pkg.mimeOf(image.partName);
-  if (DEFERRED_IMAGE_MIMES.has(mime)) {
+  const mime = image.partName ? ctx.pkg.mimeOf(image.partName) : null;
+  if (image.partName && DEFERRED_IMAGE_MIMES.has(mime)) {
     ctx.diag.add('unsupported', `image part ${image.partName} (EMF/WMF/TIFF) conversion deferred to a later phase`, ctx.slideIndex);
     image.unsupported = true;
   }
@@ -123,15 +123,26 @@ function finishImage(image, node, ctx) {
 
 function imageOf(node, ctx) {
   const blip = node.path('p:blipFill/a:blip');
+  const image = {};
+  // (02-05) a:videoFile r:link — the pic is a video; blip stays as poster
+  const videoFile = node.path('p:nvPicPr/p:nvPr/a:videoFile');
+  if (videoFile) {
+    const rid = videoFile.attr('r:link');
+    const rel = rid && ctx.pkg?.rels(ctx.partName)?.find(r => r.id === rid);
+    if (rel && !rel.external)
+      image.videoPart = ctx.pkg.resolvePartName(ctx.partName, rel.target);
+    else if (rid)
+      ctx.diag.add('missing', `video rel ${rid} not found`, ctx.slideIndex);
+  }
   // prefer the SVG part over the raster fallback (a:extLst//asvg:svgBlip)
   const embeds = [blip && findSvgEmbed(blip), blip?.attr('r:embed')].filter(Boolean);
   for (const rid of embeds) {
     const rel = ctx.pkg.rels(ctx.partName).find(r => r.id === rid);
     if (rel && !rel.external)
-      return finishImage({ partName: ctx.pkg.resolvePartName(ctx.partName, rel.target) }, node, ctx);
+      return finishImage({ ...image, partName: ctx.pkg.resolvePartName(ctx.partName, rel.target) }, node, ctx);
   }
   if (embeds.length) ctx.diag.add('missing', `image rel ${embeds[0]} not found`, ctx.slideIndex);
-  return null;
+  return image.videoPart ? finishImage(image, node, ctx) : null; // poster-less video still renders
 }
 
 function shapeElement(node, layer, ctx, kind, tf) {

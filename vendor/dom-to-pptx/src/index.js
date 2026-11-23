@@ -35,7 +35,7 @@ import {
   extractTableData,
   collectTextParts,
 } from './utils.js';
-import { getProcessedImage } from './image-processor.js';
+import { getProcessedImage, fetchOriginalDataUrl, getObjectFitRect } from './image-processor.js';
 import { parseAnimation } from './animations/css-parser.js';
 import { extractTransitionFromElement } from './animations/transitions.js';
 
@@ -498,7 +498,9 @@ async function processSlide(root, slide, pptx, globalOptions = {}) {
 
   // 3. Cleanup and Sort
   // Remove items that failed to generate data (marked with skip)
-  const finalQueue = renderQueue.filter((item) => !item.skip && (item.type !== 'image' || item.options.data));
+  const finalQueue = renderQueue.filter(
+    (item) => !item.skip && (item.type !== 'image' && item.type !== 'media' || item.options.data)
+  );
 
   finalQueue.sort((a, b) => {
     return compareKeys(a.zIndex, b.zIndex);
@@ -513,6 +515,7 @@ async function processSlide(root, slide, pptx, globalOptions = {}) {
 
     if (item.type === 'shape') slide.addShape(item.shapeType, item.options);
     if (item.type === 'image') slide.addImage(item.options);
+    if (item.type === 'media') slide.addMedia(item.options);
     if (item.type === 'text') slide.addText(item.textParts, item.options);
     if (item.type === 'table') {
       slide.addTable(item.tableData.rows, {
@@ -1626,17 +1629,81 @@ function prepareRenderItem(node, config, domOrder, pptx, effectiveZIndex, comput
     const objectFit = style.objectFit || 'fill';
     const objectPosition = style.objectPosition || '50% 50%';
 
+    // (fix/media-byte-embed) the rendered sub-rect an object-fit image
+    // occupies inside its border box — same math getProcessedImage applies
+    // in-canvas, but as geometry, so the ORIGINAL bytes can sit at the right
+    // rect without a re-encode (px -> inches at the config scale)
+    const fit = getObjectFitRect(widthPx, heightPx, node.naturalWidth, node.naturalHeight, objectFit, objectPosition);
+    const fitScale = PX_TO_INCH * config.scale;
     const item = {
       type: 'image',
       zIndex: parentSortKey.concat([0, -1]),
       domOrder,
-      options: { x, y, w, h, rotate: rotation, data: null },
+      options: {
+        x: x + fit.x * fitScale,
+        y: y + fit.y * fitScale,
+        w: fit.w * fitScale,
+        h: fit.h * fitScale,
+        rotate: rotation,
+        data: null,
+      },
     };
 
     const job = async () => {
+      // Byte-exact fast path (no compositing needed): embed the browser's
+      // ORIGINAL fetched bytes via addImage({data}) — a canvas re-rasterization
+      // is always a different file and breaks byte-exact round-trip fidelity.
+      // Rounded corners still need the canvas clip path, so they keep the old path.
+      if (!hasAnyRadius && node.src) {
+        const original = node.src.startsWith('data:') ? node.src : await fetchOriginalDataUrl(node.src);
+        if (original) {
+          item.options.data = original;
+          return;
+        }
+      }
+      // Fallback: the canvas output spans the FULL border box (object-fit is
+      // baked into the raster) — restore the box geometry the fit math shrank
       const processed = await getProcessedImage(node.src, widthPx, heightPx, radii, objectFit, objectPosition);
-      if (processed) item.options.data = processed;
-      else item.skip = true;
+      if (processed) {
+        item.options.x = x;
+        item.options.y = y;
+        item.options.w = w;
+        item.options.h = h;
+        item.options.data = processed;
+      } else {
+        item.skip = true;
+      }
+    };
+
+    return { items: [item], job, stopRecursion: true };
+  }
+
+  // --- ASYNC JOB: VIDEO Tags (fix/media-byte-embed) ---
+  // A <video> becomes a real pptx media object (a:videoFile r:link + mp4
+  // part) instead of nothing: pptxgenjs addMedia({type:'video', data}) embeds
+  // the fetched bytes verbatim and paints a poster cover automatically.
+  if ((node?.tagName || '').toLowerCase() === 'video') {
+    const sourceEl = node.querySelector('source[src]');
+    const videoSrc = (sourceEl && sourceEl.getAttribute('src')) || node.getAttribute('src') || '';
+
+    const item = {
+      type: 'media',
+      zIndex: parentSortKey.concat([0, -1]),
+      domOrder,
+      options: { type: 'video', x, y, w, h, data: null },
+    };
+
+    const job = async () => {
+      if (!videoSrc) {
+        item.skip = true;
+        return;
+      }
+      const original = videoSrc.startsWith('data:') ? videoSrc : await fetchOriginalDataUrl(videoSrc);
+      if (original) item.options.data = original;
+      else {
+        console.warn(`dom-to-pptx: video bytes could not be fetched (${videoSrc}) — skipping media object`);
+        item.skip = true;
+      }
     };
 
     return { items: [item], job, stopRecursion: true };

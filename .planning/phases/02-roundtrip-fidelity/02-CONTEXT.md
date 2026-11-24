@@ -8,6 +8,8 @@
 
 **GitHub parent:** #39
 
+**GitHub parent:** #39
+
 ## Goal
 
 Make the LAND.E round-trip faithful: all 20 slides — gif/video slides included — survive the dom-to-pptx → pptx-to-html loop, formatting drift is diagnosed per slide and fixed, and the flow exports per-slide PNGs so visual comparison never requires opening the pptx.

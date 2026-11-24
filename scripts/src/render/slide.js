@@ -75,6 +75,13 @@ function elementBox(el, rctx, slide, off = null) {
     if (el.image.unsupported) {
       // decision 21 deferred tier: keep the box truthful, mark the gap
       inner = `<div class="pp-img-deferred" style="width:100%;height:100%;border:2px dashed #999;display:flex;align-items:center;justify-content:center;color:#666">[image: EMF/WMF/TIFF deferred]</div>`;
+    } else if (el.image.videoPart) {
+      // (02-05) video pic: playable <video> (data-URI source via rctx.url)
+      // instead of a bare <img>; the poster blip stays the first frame
+      const type = rctx.pkg.mimeOf(el.image.videoPart);           // 'video/mp4' via util/mime.js
+      const poster = el.image.partName ? ` poster="${rctx.url(el.image.partName)}"` : '';
+      inner = `<video class="pp-video" controls${poster} style="width:100%;height:100%;object-fit:contain">` +
+              `<source src="${rctx.url(el.image.videoPart)}" type="${type}"></video>`;
     } else {
       const s = el.image.srcRect;
       const cropped = s && (s.l || s.t || s.r || s.b);

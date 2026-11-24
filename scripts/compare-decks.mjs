@@ -11,14 +11,17 @@
 //     images (Marp section-split background containers inflate counts)
 //   - mean per-slide Jaccard >= 0.70 and min per-slide Jaccard >= 0.30
 //     (code-block slides legitimately drift through the pptx round trip)
-//   - converted deck keeps >= 50% of the source's image count
+//   - media survival: every unique source media file (src="…" refs) present
+//     byte-identically in the converted deck — survival N/N (phase 02,
+//     decision 9; replaces the old >=50%-image-count gate, now report-only)
 
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const MEAN_THRESHOLD = 0.70; // mean per-slide Jaccard
 const MIN_THRESHOLD = 0.30;  // min per-slide Jaccard
-const IMAGE_RATIO_THRESHOLD = 0.50; // converted keeps >= 50% of source images
 
 // Strip <script>/<style> blocks and comments first so markup noise can never
 // enter the text or image metrics (base64 CSS backgrounds, scaler JS, the
@@ -124,6 +127,53 @@ export function countImages(html) {
   return (clean.match(/<img/gi) ?? []).length + (clean.match(/data:image/gi) ?? []).length;
 }
 
+// ---- media survival (phase 02, decision 9) ----------------------------------
+// The acceptance image metric: each unique real media FILE referenced by the
+// source (src="…" paths — not data URIs, not remote URLs) must survive into
+// the converted deck byte-identically, as an embedded base64 payload or a
+// resolvable file ref. Raw img-tag counting stays report-only above; it
+// over-counted junk rasterizations while real photos went missing (233%).
+
+const md5 = (buf) => createHash('md5').update(buf).digest('hex');
+
+// unique non-data, non-remote src values of a deck (file refs)
+export function mediaRefs(html) {
+  const refs = new Set();
+  for (const m of stripScriptStyle(html).matchAll(/\bsrc="([^"]+)"/g)) {
+    const v = m[1];
+    if (!/^(data:|https?:|blob:|#)/.test(v)) refs.add(v);
+  }
+  return [...refs];
+}
+
+// fingerprint set of media payloads reachable from a deck: embedded data URIs
+// (any image/video/audio mime) plus file refs resolved against the deck's dir
+export function mediaFingerprints(html, baseDir) {
+  const fps = new Set();
+  for (const m of stripScriptStyle(html)
+    .matchAll(/data:(?:image|video|audio)\/[\w.+-]+;base64,([A-Za-z0-9+/=]+)/g))
+    fps.add(md5(Buffer.from(m[1], 'base64')));
+  for (const ref of mediaRefs(html)) {
+    try { fps.add(md5(readFileSync(resolve(baseDir, ref)))); } catch { /* unreadable ref counts as missing */ }
+  }
+  return fps;
+}
+
+// how many of the source's referenced media files survive into the converted
+// deck, and exactly which paths are missing
+export function mediaSurvival(srcHtml, srcPath, convHtml, convPath) {
+  const refs = mediaRefs(srcHtml);
+  const convFps = mediaFingerprints(convHtml, dirname(convPath));
+  const missing = [];
+  for (const ref of refs) {
+    let fp;
+    try { fp = md5(readFileSync(resolve(dirname(srcPath), ref))); }
+    catch { missing.push(ref); continue; }          // source ref itself unreadable
+    if (!convFps.has(fp)) missing.push(ref);
+  }
+  return { expected: refs.length, survived: refs.length - missing.length, missing };
+}
+
 function fmt(n) { return n.toFixed(3); }
 
 function main() {
@@ -190,8 +240,12 @@ function main() {
   const ratio = imgsSrc === 0 ? Infinity : imgsConv / imgsSrc;
   out.push(`images: source ${imgsSrc}   converted ${imgsConv}  ` +
     (imgsSrc === 0 ? '(source has none)' : `(${Math.round(ratio * 100)}% of source)`));
-  if (imgsConv < IMAGE_RATIO_THRESHOLD * imgsSrc)
-    failures.push(`converted has ${imgsConv} images < ${IMAGE_RATIO_THRESHOLD * 100}% of source's ${imgsSrc}`);
+  const survival = mediaSurvival(srcHtml, srcPath, convHtml, convPath);
+  out.push(`media survival: ${survival.survived}/${survival.expected}` +
+    (survival.expected === 0 ? ' (no source media)'
+      : survival.missing.length ? ` — missing: ${survival.missing.join(', ')}` : ' (all source media present)'));
+  if (survival.survived !== survival.expected)
+    failures.push(`media survival ${survival.survived}/${survival.expected} — missing: ${survival.missing.join(', ')}`);
 
   process.stdout.write(out.join('\n') + '\n');
   if (failures.length) {

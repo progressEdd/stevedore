@@ -36,6 +36,7 @@ const REL_NOTES = 'http://schemas.openxmlformats.org/officeDocument/2006/relatio
 // sym, color, linkId, action, field }] }], bodyPr (raw children of a:bodyPr),
 // bodyPrAttrs (raw attr string), lstStyle (raw content).
 function rPrXml(run) {
+  if (run.rPr) return run.rPr; // (02-02) raw rPr passthrough for the cascade regression test
   const attrs = [
     run.sz != null ? ` sz="${run.sz}"` : '', run.b ? ' b="1"' : '', run.i ? ' i="1"' : '',
     run.u ? ` u="${run.u}"` : '', run.strike ? ` strike="${run.strike}"` : '',

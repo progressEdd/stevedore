@@ -7,6 +7,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { convert } from '../src/index.js';
+import { OpcPackage } from '../src/opc/package.js';
+import { Diagnostics } from '../src/pptx/context.js';
+import { loadPresentation } from '../src/pptx/presentation.js';
 import { buildDeck } from './lib/deck.mjs';
 
 const render = (spec) => convert(buildDeck(spec));
@@ -16,6 +19,8 @@ const PNG_1PX = Buffer.from(
   '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489' +
   '0000000d49444154789c62000100000500010d0a2db40000000049454e44ae426082', 'hex');
 const SVG_LOGO = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="red"/></svg>';
+// mp4-ish stub: 'ftyp' at offset 4 is what the mime sniffer keys on
+const MP4_STUB = Buffer.concat([Buffer.alloc(4), Buffer.from('ftypisom')]);
 
 const leaf = (x, y, cx, cy, label) =>
   `<p:sp><p:nvSpPr><p:cNvPr id="40" name="${label}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>` +
@@ -110,6 +115,47 @@ test('asvg blip: SVG part preferred over the raster fallback', () => {
   assert.ok(m, 'img emitted with a data URI');
   assert.equal(m[1], 'image/svg+xml', 'the SVG part won over the PNG');
   assert.ok(Buffer.from(m[2], 'base64').toString('utf8').includes('<svg'), 'SVG content round-trips');
+  assert.equal(diagnostics.hasErrors, false);
+});
+
+test('video pic: model resolves a:videoFile r:link; render emits <video> with data-URI mp4 + poster', () => {
+  const REL_VIDEO = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/video';
+  const spec = {
+    masters: [{}],
+    extraParts: [
+      { name: 'ppt/media/poster1.png', data: PNG_1PX },
+      { name: 'ppt/media/clip1.mp4', data: MP4_STUB },
+    ],
+    slides: [{
+      rels: [
+        { id: 'rIdPoster', target: '../media/poster1.png' },
+        { id: 'rIdVideo', target: '../media/clip1.mp4', type: REL_VIDEO },
+      ],
+      shapes:
+        `<p:pic><p:nvPicPr><p:cNvPr id="60" name="Video 60"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr>` +
+        `<p:nvPr><a:videoFile r:link="rIdVideo"/></p:nvPr></p:nvPicPr>` +
+        `<p:blipFill><a:blip r:embed="rIdPoster"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>` +
+        `<p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="1020600"/></a:xfrm>` +
+        `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`,
+    }],
+  };
+  // model: the pic's image carries the video part; the blip stays as poster
+  const pkg = new OpcPackage(buildDeck(spec));
+  const { presentation, diag: modelDiag } = (() => {
+    const d = new Diagnostics();
+    return { presentation: loadPresentation(pkg, d), diag: d };
+  })();
+  const pic = presentation.slides[0].elements.find(el => el.kind === 'pic');
+  assert.ok(pic, 'pic element walked');
+  assert.equal(pic.image.videoPart, 'ppt/media/clip1.mp4', 'r:link resolves to the mp4 part');
+  assert.equal(pic.image.partName, 'ppt/media/poster1.png', 'blip embed stays as the poster');
+  assert.ok(!modelDiag.items.some(d => /video rel/.test(d.msg)), 'no missing-rel diagnostic');
+  // render: playable video, mp4 bytes land base64 in the HTML (survival gate scans for exactly this)
+  const { html, diagnostics } = convert(buildDeck(spec));
+  assert.ok(html.includes('<video class="pp-video" controls'), 'video element with controls');
+  assert.ok(html.includes('<source src="data:video/mp4;base64,'), 'data-URI mp4 source');
+  assert.ok(html.includes(' poster="data:image/png;base64,'), 'poster from the poster blip');
+  assert.ok(html.includes('type="video/mp4"'), 'source type from the sniffed mime');
   assert.equal(diagnostics.hasErrors, false);
 });
 

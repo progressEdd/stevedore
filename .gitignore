@@ -199,3 +199,8 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+# vendored toolchains (02-01): installs/build outputs/lockfiles never committed
+node_modules/
+bun.lock
+bun.lockb
+vendor/dom-to-pptx/dist/

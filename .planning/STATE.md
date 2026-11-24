@@ -1,12 +1,12 @@
 ---
-next_action: /skill:implement
-progress: planned
+next_action: /skill:review
+progress: executed
 ---
 
 # State
 
 **Phase:** 02 roundtrip-fidelity
-**Status:** review round 2: vision pass found gap 4 (code-slide PNG capture — runs don't paint) — fix plans 02-FX4..02-FX5 awaiting execution
+**Status:** executed — fix round 2 (FX4 capture-safe paint order + ink auditor; FX5 canonical artifacts with painted code slides + re-evidenced breakdown) in PRs #67/#68 — awaiting PR merges, fresh re-verify, and the SC4 visual sign-off
 
 <!--
 STATE.md is the router surface. The frontmatter (next_action, progress) is the

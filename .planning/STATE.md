@@ -1,12 +1,12 @@
 ---
-next_action: /skill:define
-progress: shipped
+next_action: /skill:implement
+progress: planned
 ---
 
 # State
 
-**Phase:** 01 pptx-to-html
-**Status:** shipped — PASSED, zero unaccepted gaps (3/3 success criteria, 24/24 decisions, 139/139 tests, PURITY-OK, SUBTREE-OK); fix rounds FX1/FX2 merged via PR #37/#38 — roadmap complete
+**Phase:** 02 roundtrip-fidelity
+**Status:** review: 3 gaps found (visual sign-off falsified text-slide "fixed" claims) — fix plans 02-FX1..02-FX3 awaiting execution
 
 <!--
 STATE.md is the router surface. The frontmatter (next_action, progress) is the

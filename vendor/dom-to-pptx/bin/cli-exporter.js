@@ -164,8 +164,12 @@ async function runExporter(argv) {
   // Resolve slide and browser dimensions using script scale (PPI = 192)
   const slideWidth = args.width || 10;
   const slideHeight = args.height || 5.625;
-  const browserWidth = args.browserWidth || Math.round(slideWidth * 192);
-  const browserHeight = args.browserHeight || Math.round(slideHeight * 192);
+  // (fix/font-design-viewport) Only pin the viewport when the user asked
+  // for one (--bw/--bh); otherwise node-exporter sizes the capture viewport
+  // to the deck's own design rect, so viewport-dependent computed font
+  // sizes match the deck's reference rendering instead of slideWidth × 192.
+  const browserWidth = args.browserWidth || undefined;
+  const browserHeight = args.browserHeight || undefined;
 
   // Build options for node-exporter
   const exporterOptions = {

@@ -20,6 +20,12 @@
     strings previously smeared "), linear-gradient(to top" into a
     stop-color attribute — slide 17's malformed image-17-2.svg) and skips
     non-color stops, bailing when <2 survive.
+  - fix/font-design-viewport — off v2.1.2; capture viewport now defaults to
+    the first slide element's own design rect (explicit --bw/--bh still
+    wins). Decks sizing type against the viewport (Marp `@auto-scaling`,
+    vw/rem themes) previously resolved every computed font size at the CLI
+    default (slideWidth × 192 = 2560px for LAND.E) and exported sz at
+    ~44–47% of the true design size. Closes VERIFICATION gap 2 (plan 02-FX2).
 - Local deltas vs upstream v2.1.2: the union of the branches above
 - Excluded from this copy: node_modules/, dist/ (built by scripts/setup-roundtrip.sh), lockfiles
-- Synced: 2026-11-23 via scripts/vendor-sync.sh
+- Synced: 2026-11-23 via scripts/vendor-sync.sh (02-FX2: fix/font-design-viewport)

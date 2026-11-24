@@ -15,5 +15,11 @@ export function fontFamily(typeface, ctx) {
   }
   const fallback = ctx?.theme?.fontScheme?.minor?.latin ?? 'sans-serif';
   const generic = SERIF_FACES.has(name) ? 'serif' : 'sans-serif';
-  return `"${name}", ${fallback}, ${generic}`;
+  // (02-FX1) single-quoted name. A double-quoted family inside a style="…"
+  // attribute terminated the attribute mid-declaration, so browsers applied
+  // only font-size and silently dropped font-family/font-weight/font-style/
+  // color (VERIFICATION gap 1). CSS single-quoted strings are valid
+  // font-family names and carry no HTML-attribute meaning; embedded single
+  // quotes are backslash-escaped per the CSS spec.
+  return `'${name.replace(/'/g, "\\'")}', ${fallback}, ${generic}`;
 }

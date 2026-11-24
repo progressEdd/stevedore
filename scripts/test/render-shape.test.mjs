@@ -110,11 +110,11 @@ test('shape effects ignored with one approx diagnostic per slide', () => {
 test('fontFamily resolves +mj-lt/+mn-lt through the theme with quoted names', () => {
   const ctx = { theme: loadTheme(null, null, null) };
   const major = fontFamily('+mj-lt', ctx);
-  assert.ok(major.includes('"Calibri Light"'), 'major latin quoted: ' + major);
+  assert.ok(major.includes("'Calibri Light'"), 'major latin quoted: ' + major); // (02-FX1) attribute-safe single-quoted stacks
   assert.match(major, /, sans-serif$/);
   const minor = fontFamily('+mn-lt', ctx);
-  assert.ok(minor.startsWith('"Calibri"'), 'minor latin quoted: ' + minor);
-  assert.ok(fontFamily('+mn-ea', ctx).includes('"Calibri"'), 'ea suffix selects latin for now');
+  assert.ok(minor.startsWith("'Calibri'"), 'minor latin quoted: ' + minor); // (02-FX1) attribute-safe single-quoted stacks
+  assert.ok(fontFamily('+mn-ea', ctx).includes("'Calibri'"), 'ea suffix selects latin for now'); // (02-FX1) attribute-safe single-quoted stacks
   const serif = fontFamily('Cambria', ctx);
   assert.ok(serif.endsWith(', serif'), 'serif fallback for serif faces: ' + serif);
 });

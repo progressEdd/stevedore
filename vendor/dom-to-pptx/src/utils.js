@@ -569,6 +569,19 @@ export function getSoftEdges(filterStr, scale) {
   return null;
 }
 
+/**
+ * Resolves the capture viewport for an export run.
+ * Returns null when the caller pinned an explicit viewport (respect it) or
+ * when the slide's design rect is unusable; otherwise the design rect,
+ * rounded — capturing at the deck's own size keeps viewport-dependent
+ * computed styles (Marp auto-scaling, vw/rem themes) at their true scale.
+ */
+export function resolveCaptureViewport(explicit, designRect) {
+  if (explicit && explicit.width > 0 && explicit.height > 0) return null;
+  if (!designRect || !(designRect.width > 0) || !(designRect.height > 0)) return null;
+  return { width: Math.round(designRect.width), height: Math.round(designRect.height) };
+}
+
 export function getTextStyle(style, scale, includeMargins = true, inheritedOpacity = 1) {
   let colorObj = parseColor(style.color, style);
   let opacity = colorObj.opacity * inheritedOpacity;

@@ -6,7 +6,7 @@ progress: executed
 # State
 
 **Phase:** 02 roundtrip-fidelity
-**Status:** executed — 6 plans sequential, merged per target (stevedore via PR #59; progressEdd PR at merge-back); awaiting review
+**Status:** executed — 6 plans sequential; stevedore landed via PR #59, progressEdd landed via local merge a5820f1; awaiting review
 
 <!--
 STATE.md is the router surface. The frontmatter (next_action, progress) is the

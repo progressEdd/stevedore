@@ -5,8 +5,8 @@
 // styled runs as inline-styled <span>s (no classes — the output must be
 // self-contained), fields, hyperlinks through a scheme whitelist, autofit
 // scaling at emit time, vertical text, and PowerPoint blank lines preserved
-// as <p><br></p>. All text escapes through escapeXml; all font-family
-// values are quoted.
+// as <p><br></p>. All text escapes through escapeXml;
+// all font-family values are single-quoted (attribute-safe — 02-FX1).
 
 import { escapeXml } from '../util/xml.js';
 import { fontFamily } from './fonts.js';

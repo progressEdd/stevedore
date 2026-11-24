@@ -178,3 +178,40 @@ test('run properties merge through the chain into render: layout bullet, slide r
   assert.ok(html.includes('<span aria-hidden="true">• </span>'), 'layout-level bullet char');
   assert.ok(html.includes('font-size:32px'), 'slide-level run size on the same paragraph');
 });
+
+test('quoted font stack survives style-attribute emission — VERIFICATION gap 1 (02-FX1)', () => {
+  const { html } = render({
+    masters: [{}],
+    slides: [{
+      rels: [],
+      texts: [{ paragraphs: [{ runs: [
+        { t: 'title', sz: 4000, b: true, latin: '-apple-system', color: '1F2328' },
+      ] }] }],
+    }],
+  });
+  const m = html.match(/<span style="([^"]*)"/);
+  assert.ok(m, 'styled span present');
+  const style = m[1];
+  assert.ok(style.includes("font-family:'-apple-system'"), 'single-quoted stack inside the attribute');
+  assert.ok(/font-weight:700/.test(style), 'font-weight survives (emitted after font-family)');
+  assert.ok(/font-style:normal/.test(style), 'font-style survives');
+  assert.ok(/color:#1f2328/.test(style), 'color survives');
+  assert.ok(style.indexOf('font-family:') < style.indexOf('font-weight:700'),
+    'declarations after font-family stay inside the same attribute');
+});
+
+test('no emitted attribute carries a raw double-quoted family — document sweep (02-FX1)', () => {
+  const { html } = render({
+    masters: [{}],
+    slides: [{
+      rels: [],
+      texts: [{ paragraphs: [{ runs: [
+        { t: 'code', sz: 1100, latin: 'ui-monospace', color: '4B5563' },
+        { t: ' plain', sz: 1100, latin: '-apple-system' },
+      ] }] }],
+    }],
+  });
+  assert.ok(!/font-family:"/.test(html), 'attribute-breaking signature: font-family:"');
+  assert.ok(html.includes("font-family:'ui-monospace'"), 'monospace stack single-quoted');
+  assert.ok(html.includes("font-family:'-apple-system'"), 'sans stack single-quoted');
+});

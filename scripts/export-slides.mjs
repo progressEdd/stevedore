@@ -86,6 +86,15 @@ async function main() {
       svg[data-marpit-svg]{position:static!important;opacity:1!important;content-visibility:visible!important;z-index:auto!important;pointer-events:auto!important}
       .bespoke-marp-osc{display:none!important}
       .pp-slide{transform:none!important;margin:0!important}
+      /* (02-FX4) Converter shape+text boxes emit the fill svg as a POSITIONED
+         sibling (position:absolute) and .pp-text as static — positioned boxes
+         paint in CSS 2.1 App E step 8, above static content (steps 4–7), so
+         opaque shape fills (code-slide line tints) covered their own text in
+         every capture. position:relative moves .pp-text into the positioned
+         phase in TREE ORDER: above its own shape's fill (PowerPoint paints a
+         shape's text above its fill), below later shapes (spTree z-order
+         preserved). Marp decks have no .pp-text — no-op on the reference side. */
+      .pp-text{position:relative}
     ` });
     const selector = args.selector ?? await page.evaluate(() =>
       document.querySelector('.pp-slide') ? '.pp-slide' : 'section');

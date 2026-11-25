@@ -26,6 +26,21 @@
     vw/rem themes) previously resolved every computed font size at the CLI
     default (slideWidth × 192 = 2560px for LAND.E) and exported sz at
     ~44–47% of the true design size. Closes VERIFICATION gap 2 (plan 02-FX2).
+  - fix/pseudo-z-index — off v2.1.2; ::before/::after pseudo-element items
+    sort by the pseudo's OWN computed z-index (pseudoSortKey in src/utils.js)
+    instead of a hardcoded below/above-everything level. An overlay like
+    .panel::after{z-index:2} previously sorted below any in-flow child with
+    z-index >= 1 (.panel .img{z-index:1}), exporting the gradient overlay
+    under the photo it visually covers — slide 17's half-panel gradients
+    invisible in the round-trip. Closes VERIFICATION addendum #4 gap 7
+    (plan 02-FX7).
+  - fix/real-mono-typeface — off v2.1.2; getTextStyle maps a leading ui-*
+    keyword family to a real font (resolveRealTypeface in src/utils.js;
+    ui-monospace -> Consolas) before writing the run's <a:latin typeface>.
+    font-family resolution is a browser concept — PowerPoint renders
+    `typeface="ui-monospace"` with a proportional default, so code exported
+    from decks using CSS keyword font stacks rendered proportionally. Closes
+    VERIFICATION addendum #5 gap 10 (plan 02-FX9).
 - Local deltas vs upstream v2.1.2: the union of the branches above
 - Excluded from this copy: node_modules/, dist/ (built by scripts/setup-roundtrip.sh), lockfiles
-- Synced: 2026-11-23 via scripts/vendor-sync.sh (02-FX2: fix/font-design-viewport)
+- Synced: 2026-11-24 via scripts/vendor-sync.sh (02-FX9: fix/real-mono-typeface)

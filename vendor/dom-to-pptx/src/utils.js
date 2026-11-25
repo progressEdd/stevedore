@@ -562,6 +562,24 @@ export function createTableCellMargin(top, right, bottom, left) {
   return [top, right, bottom, left];
 }
 
+/**
+ * Sort key for a ::before/::after pseudo-element item (fix/pseudo-z-index).
+ * The pseudo participates in its host's stacking context by its OWN
+ * computed z-index — not a hardcoded below/above-everything level. The
+ * previous ::after key hardcoded 0, so an overlay like
+ * .panel::after{z-index:2} sorted BELOW any in-flow child with z-index >= 1
+ * (e.g. .panel .img{z-index:1}) and exported under the content it
+ * visually covers. 'auto'/unparsable keeps tree-order semantics:
+ * ::before below all content, ::after above same-z content.
+ */
+export function pseudoSortKey(parentSortKey, pseudoType, pseudoZIndex) {
+  const raw = String(pseudoZIndex ?? '').trim();
+  const parsed = raw && raw !== 'auto' ? parseInt(raw, 10) : NaN;
+  const z = Number.isNaN(parsed) ? (pseudoType === '::before' ? -1000000 : 0) : parsed;
+  const tie = pseudoType === '::before' ? -1 : Infinity;
+  return parentSortKey.concat([z, tie]);
+}
+
 export function getSoftEdges(filterStr, scale) {
   if (!filterStr || filterStr === 'none') return null;
   const match = filterStr.match(/blur\(([\d.]+)px\)/);
@@ -637,7 +655,10 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
   return {
     color: colorObj.hex || '000000',
     ...(transparency > 0 && { transparency }),
-    fontFace: style.fontFamily.split(',')[0].replace(/['"]/g, ''),
+    // (fix/real-mono-typeface) a leading ui-* keyword would land verbatim
+    // in <a:latin typeface="…"> and render proportionally in PowerPoint —
+    // map it to a real font (ui-monospace -> Consolas).
+    fontFace: resolveRealTypeface(style.fontFamily.split(',')[0]),
     fontSize: fontSizePx * 0.75 * scale,
     bold: parseInt(style.fontWeight) >= 600,
     italic: style.fontStyle === 'italic',
@@ -655,6 +676,25 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
       ? { charSpacing: parseFloat(style.letterSpacing) * 0.75 * scale }
       : {}),
   };
+}
+
+/**
+ * Maps a CSS ui-* generic keyword family to a real font for pptx run
+ * properties (fix/real-mono-typeface). font-family resolution is a browser
+ * concept: PowerPoint does not resolve keyword typefaces by family class —
+ * `latin typeface="ui-monospace"` renders with a proportional default, the
+ * same failure chromium shows when the keyword resolves to nothing. Real
+ * families pass through unchanged.
+ */
+const UI_TYPEFACE_MAP = {
+  'ui-monospace': 'Consolas',
+  'ui-sans-serif': 'Calibri',
+  'ui-serif': 'Georgia',
+  'ui-rounded': 'Calibri',
+};
+export function resolveRealTypeface(firstFamilyToken) {
+  const token = String(firstFamilyToken ?? '').trim().replace(/['"]/g, '');
+  return UI_TYPEFACE_MAP[token] ?? token;
 }
 
 /**

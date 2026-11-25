@@ -169,15 +169,22 @@ function extractPPr(pPrNode, ctx) {
 function extractRPr(rPr, ctx) {
   if (!rPr) return null;
   const r = {};
-  if (rPr.attrs.sz !== undefined) r.sz = Math.round(rPr.num('sz', 0) * HUNDREDTHS_PT_TO_PX);
+  // (02-FX6) preserve fractional px — Math.round snapped 9.57px code runs
+  // to 10px (+4.5% visible size/advance/wrap drift vs the reference
+  // rendering; the sz attribute already carries hundredths of a point).
+  // Same 2-decimal convention as the spacing conversions above (lines 95/138).
+  if (rPr.attrs.sz !== undefined) r.sz = Math.round(rPr.num('sz', 0) * HUNDREDTHS_PT_TO_PX * 100) / 100;
   if (rPr.attrs.b !== undefined) r.b = rPr.bool('b');
   if (rPr.attrs.i !== undefined) r.i = rPr.bool('i');
   if (rPr.attrs.u !== undefined) r.u = rPr.attr('u', 'none');
   if (rPr.attrs.strike !== undefined) r.strike = rPr.attr('strike', 'noStrike');
   if (rPr.attrs.cap !== undefined) r.caps = rPr.attr('cap', 'none');
   if (rPr.attrs.baseline !== undefined) r.baselinePct = rPr.int('baseline', 0) / 1000;
+  // (02-FX6) @spc is 1/100 pt — convert to px like every other pt-derived
+  // value (the old /100 read 0.4pt as 0.4px instead of 0.53px, a ~25%
+  // letter-spacing shortfall on tracked headings)
   if (rPr.attrs.spc !== undefined)
-    r.spc = rPr.num('spc', 0) / 100; // @spc is 1/100 pt — read as px (documented approximation)
+    r.spc = Math.round(rPr.num('spc', 0) * HUNDREDTHS_PT_TO_PX * 100) / 100;
   const solid = rPr.find('a:solidFill');
   if (solid) r.colorNode = solid.children.find(c => c.name.startsWith('a:')) ?? null;
   const hl = rPr.find('a:highlight');

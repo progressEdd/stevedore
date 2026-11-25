@@ -157,7 +157,8 @@ test('styled run carries every property inline, self-contained (no classes)', ()
   const span = html.slice(html.indexOf('<span'), html.indexOf('</span>'));
   for (const frag of ['font-size:24px', 'font-family:', 'font-weight:700', 'font-style:italic',
     'color:#ff0000', 'text-decoration:underline line-through', 'font-variant:small-caps',
-    'letter-spacing:3px', 'vertical-align:30%', 'top:-12px'])
+    'letter-spacing:4px', // (02-FX6) 3pt spc -> 4px (pt->px)
+    'vertical-align:30%', 'top:-12px'])
     assert.ok(span.includes(frag), `${frag} in span: ${span}`);
 });
 
@@ -214,4 +215,14 @@ test('no emitted attribute carries a raw double-quoted family — document sweep
   assert.ok(!/font-family:"/.test(html), 'attribute-breaking signature: font-family:"');
   assert.ok(html.includes("font-family:'ui-monospace'"), 'monospace stack single-quoted');
   assert.ok(html.includes("font-family:'-apple-system'"), 'sans stack single-quoted');
+});
+
+test('fractional run sizes survive emission — VERIFICATION addendum #4 gap 6 (02-FX6)', () => {
+  const { html } = render({
+    masters: [{}],
+    slides: [{ rels: [], texts: [{ paragraphs: [{ runs: [
+      { t: 'x = 1', sz: 718, latin: 'ui-monospace', color: '4B5563' },
+    ] }] }] }],
+  });
+  assert.ok(html.includes('font-size:9.57px'), 'sz 718 -> 9.57px emitted, not the integer-snapped 10px');
 });

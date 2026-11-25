@@ -246,7 +246,7 @@ test('run properties survive the merge: sz/pt->px, baseline, spc, caps, fonts, s
   assert.equal(r.u, 'sng'); assert.equal(r.strike, 'sngStrike');
   assert.equal(r.caps, 'small');
   assert.equal(r.baselinePct, 30);
-  assert.equal(r.spc, 3);
+  assert.equal(r.spc, 4, '3pt -> 4px (02-FX6 pt->px)');
   assert.deepEqual(r.font, { latin: 'Calibri', ea: null, cs: null, sym: 'Wingdings' });
 });
 
@@ -303,8 +303,25 @@ test('defaultTextStyle fills gaps only — run a:rPr wins over presentation defa
   });
   const el = base.slide.elements.find(e => e.layer === 'slide');
   const run = bodyOf(base, el).paragraphs[0].runs[0];
-  assert.equal(run.rPr.sz, 19);                     // 1414 hundredths-pt → 19 px (run beats default 24)
+  assert.equal(run.rPr.sz, 18.85, '1414 hundredths-pt -> 18.85px (02-FX6)');   // run beats default 24
   assert.equal(run.rPr.b, true);
   assert.equal(run.rPr.font.latin, '-apple-system');
   assert.equal(run.rPr.color, '#1f2328');           // resolved AFTER merge, from the run's own node
+});
+
+test('run metrics preserve fractional px — VERIFICATION addendum #4 gap 6 (02-FX6)', () => {
+  const base = load({
+    masters: [{}],
+    slides: [{
+      rels: [],
+      texts: [{ paragraphs: [{ runs: [
+        { t: 'code line', sz: 739, spc: 40, latin: 'ui-monospace', color: '4B5563' },
+      ] }] }],
+    }],
+  });
+  const el = base.slide.elements.find(e => e.layer === 'slide');
+  // (02-FX6) run props live under .rPr — the model nests them there
+  const r = bodyOf(base, el).paragraphs[0].runs[0].rPr;
+  assert.equal(r.sz, 9.85, 'sz 739 (7.39pt) -> 9.85px, NOT Math.round -> 10');
+  assert.equal(r.spc, 0.53, 'spc 40 (0.4pt) -> 0.53px (pt->px), NOT the old /100 -> 0.4');
 });

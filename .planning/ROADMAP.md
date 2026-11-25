@@ -6,12 +6,12 @@
 
 ## Next up
 
-**Phase 02: roundtrip-fidelity** — fix the LAND.E round-trip: media slides render, formatting drift diagnosed and fixed, per-slide PNG export in the flow
+**none — roadmap complete**
 
 ## Phases
 
 - [x] **Phase 01: pptx-to-html** — an agent skill that converts `.pptx` decks to HTML — our own implementation (PPTX2HTML as reference), living on a clean `stevedore` branch, consumed via git subtree
-- [ ] **Phase 02: roundtrip-fidelity** — fix the LAND.E round-trip (images, media slides, formatting drift) with per-slide PNG export built into the flow
+- [x] **Phase 02: roundtrip-fidelity** — fix the LAND.E round-trip (images, media slides, formatting drift) with per-slide PNG export built into the flow
 - [ ] **Phase 03: <slug>** — <one-line description>
 
 ## Phase details
@@ -61,7 +61,7 @@ Plans:
 | Phase | Plans complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 01 `pptx-to-html` | 8/8 | Shipped | 2026-11-20 |
-| 02 `roundtrip-fidelity` | 6/6 | Executed | — |
+| 02 `roundtrip-fidelity` | 6/6 | Shipped | 2026-11-24 |
 
 <!--
 Conventions:

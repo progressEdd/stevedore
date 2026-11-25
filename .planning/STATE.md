@@ -1,12 +1,12 @@
 ---
-next_action: /skill:review
-progress: executed
+next_action: /skill:define
+progress: shipped
 ---
 
 # State
 
 **Phase:** 02 roundtrip-fidelity
-**Status:** executed — fix round 4: FX9 real mono stacks (converter + fork `fix/real-mono-typeface`), FX10 STOP-RULE verdict (gap 11 accepted, evidence recorded), FX11 canonical artifacts + breakdown — pushed to PRs #67/#68; awaiting merges, re-verify, and SC4 sign-off
+**Status:** shipped — PASSED (41/41 verifies, 13/13 decisions, 4 fix rounds, 40/40 PNGs reproduced byte-identical); 1 accepted gap (slide-17 gradient strength, decision-8 class) — roadmap complete
 
 <!--
 STATE.md is the router surface. The frontmatter (next_action, progress) is the

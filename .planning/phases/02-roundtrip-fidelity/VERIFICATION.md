@@ -68,6 +68,12 @@ All commands run fresh by this verifier unless noted. Stevedore-side commands ra
 
 ## Gaps found
 
+**Addendum #5 (2026-11-24, post-FX8 — user SC4 re-review of the regenerated pair):**
+
+10. **Slide 8 fonts STILL proportional (proven root cause, gap 6 incompletely closed).** Probe (playwright on nix chromium, width of "iiiwww"): round-trip stack `'ui-monospace', Calibri, sans-serif` → **45.3px = sans-serif width** (real `monospace` → 47.0; Consolas → 57.8) — `ui-monospace` does not resolve to a monospace font on this chromium, falls through Calibri (absent) → proportional sans. FX6 fixed fractional SIZES but not the family resolution. The pptx likewise carries `latin typeface="ui-monospace"` — PowerPoint substitutes the same way (proportional). Fix surface: converter emission maps ui-monospace to a real mono fallback stack; exporter fork maps the pptx typeface to a real font (Consolas/Courier New). Proven, small, both halves.
+11. **Slide 17 gradients STILL not painting (gap 7 not visually closed).** Facts: FX8's 17.png changed vs FX5 (pseudo-z-order reorder landed) and the HTML embeds 6 SVG + 1 PNG gradient data-URIs, but the user's eyes on the latest pair report the gradients still absent. Suspect: the FX4 paint-order class recurring for `<img>` gradient elements, or malformed/blank SVG content that decodes but renders empty. Two rounds spent — any further attempt carries a hard STOP rule: if the diagnosis matrix does not flip the pixels, record as an accepted gap, never a fourth attempt.
+
+
 **Addendum #4 (2026-11-24, post-verify3 — user SC4 visual sign-off on the PR #68 side-by-side set):** four residual drifts reported by the user's eyes. Classification per the recorded record:
 
 6. **Slide 8 — fonts off (NEW, needs diagnosis).** Probe facts: reference code font stack is `var(--fontStack-monospace, ui-monospace, SFMono-Regular, …)`; round-trip emits `'ui-monospace', Calibri, sans-serif` (single-quoted, FX1-correct). Stacks resolve to the same family in chromium, yet the user sees font differences — suspected per-line text-box spacing/weight/leading class (the standing per-line-layout defer's visible signature) or weight/size rounding. Falsifiable diagnosis needed; smallest fix likely in the converter's text emission or the exporter's per-line model.

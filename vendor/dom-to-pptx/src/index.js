@@ -34,6 +34,7 @@ import {
   detectVariantSlotCollisions,
   extractTableData,
   collectTextParts,
+  pseudoSortKey,
 } from './utils.js';
 import { getProcessedImage, fetchOriginalDataUrl, getObjectFitRect } from './image-processor.js';
 import { parseAnimation } from './animations/css-parser.js';
@@ -2085,28 +2086,21 @@ function prepareRenderItem(node, config, domOrder, pptx, effectiveZIndex, comput
   const pseudoJobs = [];
 
   if (globalOptions.includePseudoElements !== false) {
+    // (fix/pseudo-z-index) sort pseudos by their OWN computed z-index —
+    // hardcoded levels inverted z-indexed overlays under z-indexed in-flow
+    // content (slide 17's .vs-side::after z:2 under .vs-image z:1)
     const pseudoBeforeRes = preparePseudoElementItem(
-      node,
-      '::before',
-      rect,
-      config,
-      parentSortKey.concat([-1000000]),
-      domOrder,
-      pptx,
-      globalOptions
+      node, '::before', rect, config,
+      pseudoSortKey(parentSortKey, '::before', window.getComputedStyle(node, '::before').zIndex),
+      domOrder, pptx, globalOptions
     );
     if (pseudoBeforeRes?.item) items.unshift(pseudoBeforeRes.item);
     if (pseudoBeforeRes?.job) pseudoJobs.push(pseudoBeforeRes.job);
 
     const pseudoAfterRes = preparePseudoElementItem(
-      node,
-      '::after',
-      rect,
-      config,
-      parentSortKey.concat([0, Infinity]),
-      domOrder,
-      pptx,
-      globalOptions
+      node, '::after', rect, config,
+      pseudoSortKey(parentSortKey, '::after', window.getComputedStyle(node, '::after').zIndex),
+      domOrder, pptx, globalOptions
     );
     if (pseudoAfterRes?.item) items.push(pseudoAfterRes.item);
     if (pseudoAfterRes?.job) pseudoJobs.push(pseudoAfterRes.job);

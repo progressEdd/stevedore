@@ -562,6 +562,24 @@ export function createTableCellMargin(top, right, bottom, left) {
   return [top, right, bottom, left];
 }
 
+/**
+ * Sort key for a ::before/::after pseudo-element item (fix/pseudo-z-index).
+ * The pseudo participates in its host's stacking context by its OWN
+ * computed z-index — not a hardcoded below/above-everything level. The
+ * previous ::after key hardcoded 0, so an overlay like
+ * .panel::after{z-index:2} sorted BELOW any in-flow child with z-index >= 1
+ * (e.g. .panel .img{z-index:1}) and exported under the content it
+ * visually covers. 'auto'/unparsable keeps tree-order semantics:
+ * ::before below all content, ::after above same-z content.
+ */
+export function pseudoSortKey(parentSortKey, pseudoType, pseudoZIndex) {
+  const raw = String(pseudoZIndex ?? '').trim();
+  const parsed = raw && raw !== 'auto' ? parseInt(raw, 10) : NaN;
+  const z = Number.isNaN(parsed) ? (pseudoType === '::before' ? -1000000 : 0) : parsed;
+  const tie = pseudoType === '::before' ? -1 : Infinity;
+  return parentSortKey.concat([z, tie]);
+}
+
 export function getSoftEdges(filterStr, scale) {
   if (!filterStr || filterStr === 'none') return null;
   const match = filterStr.match(/blur\(([\d.]+)px\)/);

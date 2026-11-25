@@ -43,6 +43,13 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$INPUT" ] && [ -n "$OUT" ] || { usage >&2; exit 2; }
 [ -f "$INPUT" ] || { echo "html-to-pptx: no such file: $INPUT" >&2; exit 2; }
+# Relative paths must resolve against the CALLER's cwd, not vendor/ — the
+# vendored CLI path.resolve()s both against its own cwd after the cd below
+# (03-01 deviation: the plan's proof invokes this wrapper with a relative
+# input; roundtrip.sh always passed realpath'd absolutes, so the plan's
+# wrapper text omitted this). Absolutize both, exactly as roundtrip.sh does.
+INPUT="$(realpath "$INPUT")"
+OUT="$(realpath -m "$OUT")"
 [ -n "$(ls -A "$VENDOR/dist" 2>/dev/null)" ] || { echo "html-to-pptx: vendor/dom-to-pptx not built — run scripts/setup-roundtrip.sh first" >&2; exit 1; }
 [ -z "$TITLE" ] && TITLE="$(basename "${INPUT%.*}")"
 

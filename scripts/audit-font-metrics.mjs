@@ -2,7 +2,7 @@
 // audit-font-metrics.mjs — reference-vs-round-trip text-metrics A/B probe
 // (02-FX6, VERIFICATION addendum #4 gap 6). Probes ONE slide's code areas on
 // BOTH decks through the production capture state (same flatten CSS, launch
-// flags and 1280×720 viewport as scripts/export-slides.mjs — KEEP IN SYNC),
+// flags and 1280×720 viewport as render/export-slides.mjs — KEEP IN SYNC),
 // diffs the computed styles + line-box geometry, and pairs tracked
 // (letter-spacing) leaf elements by text. Exit 0 iff the fixable metric
 // classes match within tolerance.

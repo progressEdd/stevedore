@@ -11,9 +11,9 @@
 // nixpkgs and is passed via executablePath:
 //   nix shell nixpkgs#chromium --command env \
 //     STEVEDORE_CHROMIUM_PATH=$(command -v chromium) \
-//     node scripts/export-slides.mjs deck.html -o outdir
+//     node render/export-slides.mjs deck.html -o outdir
 //
-// Usage: node scripts/export-slides.mjs <deck.html> -o <outdir>
+// Usage: node render/export-slides.mjs <deck.html> -o <outdir>
 //          [--selector <css>] [--width 1280] [--height 720]
 // Selector auto-detect: `.pp-slide` if the deck has one, else `section`.
 //
@@ -45,7 +45,7 @@ export function parseArgs(argv) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.html || !args.out) {
-    process.stderr.write('Usage: node scripts/export-slides.mjs <deck.html> -o <outdir> [--selector css] [--width 1280] [--height 720]\n');
+    process.stderr.write('Usage: node render/export-slides.mjs <deck.html> -o <outdir> [--selector css] [--width 1280] [--height 720]\n');
     process.exit(2);
   }
   if (!process.env.STEVEDORE_CHROMIUM_PATH) {

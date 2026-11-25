@@ -25,14 +25,33 @@ test('parseArgs reads flags and positional', () => {
   assert.equal(b.out, null);
 });
 
-test('CLI: missing args -> exit 2 with usage', () => {
-  const r = spawnSync(process.execPath, ['scripts/export-slides.mjs'], { encoding: 'utf8' });
+test('parseArgs reads --scale and --pdf (opt-in, default off)', () => {
+  const a = parseArgs(['deck.html', '-o', 'out', '--scale', '2', '--pdf']);
+  assert.equal(a.scale, 2);
+  assert.equal(a.pdf, true);
+  const b = parseArgs(['deck.html', '-o', 'out']);
+  assert.equal(b.scale, 1, 'scale default 1 — default capture recipe unchanged');
+  assert.equal(b.pdf, false);
+  assert.equal(b.viewportExplicit, false);
+  const c = parseArgs(['deck.html', '-o', 'out', '--width', '800']);
+  assert.equal(c.viewportExplicit, true, 'explicit viewport beats auto-tracking');
+});
+
+test('CLI: bad --scale -> exit 2 with the scale message', () => {
+  const r = spawnSync(process.execPath, ['render/export-slides.mjs', 'x.html', '-o', 'out', '--scale', '0'],
+    { encoding: 'utf8', env: { ...process.env, STEVEDORE_CHROMIUM_PATH: '' } });
   assert.equal(r.status, 2);
-  assert.match(r.stderr, /Usage: node scripts\/export-slides\.mjs/);
+  assert.match(r.stderr, /--scale must be a positive number/);
+});
+
+test('CLI: missing args -> exit 2 with usage', () => {
+  const r = spawnSync(process.execPath, ['render/export-slides.mjs'], { encoding: 'utf8' });
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /Usage: node render\/export-slides\.mjs/);
 });
 
 test('CLI: missing STEVEDORE_CHROMIUM_PATH -> exit 2 with the nix hint', () => {
-  const r = spawnSync(process.execPath, ['scripts/export-slides.mjs', 'x.html', '-o', 'out'],
+  const r = spawnSync(process.execPath, ['render/export-slides.mjs', 'x.html', '-o', 'out'],
     { encoding: 'utf8', env: { ...process.env, STEVEDORE_CHROMIUM_PATH: '' } });
   assert.equal(r.status, 2);
   assert.match(r.stderr, /STEVEDORE_CHROMIUM_PATH/);

@@ -10,7 +10,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { convert, convertSplit } from './src/index.js'; // sibling after the scripts/ relocation (plan text said ../src/index.js)
 
-const USAGE = `Usage: node scripts/pptx-to-html.js <input.pptx> [options]
+const USAGE = `Usage: node extract/pptx-to-html.js <input.pptx> [options]
 
 Options:
   -o, --output <path>  Output file (default: <input>.html). With --split: output directory

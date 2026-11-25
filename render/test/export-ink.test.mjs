@@ -2,7 +2,7 @@
 // tint fill must never paint over its own .pp-text runs in exported PNGs.
 // Skipped unless STEVEDORE_CHROMIUM_PATH is set — run under:
 //   nix shell nixpkgs#chromium --command env \
-//     STEVEDORE_CHROMIUM_PATH=$(command -v chromium) node --test scripts/test/*.test.mjs
+//     STEVEDORE_CHROMIUM_PATH=$(command -v chromium) node --test render/test/*.test.mjs
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { inkFraction, loadPng } from './lib/ink.mjs';
+import { inkFraction, loadPng } from '../../scripts/test/lib/ink.mjs';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const codeLine = (i, top) => `
@@ -49,7 +49,7 @@ test('regression: tint fills do not hide .pp-text code runs in exports — VERIF
     const html = join(dir, 'fixture.html');
     const out = join(dir, 'out');
     writeFileSync(html, FIXTURE);
-    const r = spawnSync(process.execPath, [join(ROOT, 'scripts/export-slides.mjs'), html, '-o', out],
+    const r = spawnSync(process.execPath, [join(ROOT, 'render/export-slides.mjs'), html, '-o', out],
       { encoding: 'utf8' });
     assert.equal(r.status, 0, `exporter failed: ${r.stderr}`);
     assert.deepEqual(readdirSync(out), ['01.png']);

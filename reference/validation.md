@@ -2,7 +2,8 @@
 
 Paths on this page are relative to the skill root. Run this checklist after
 every conversion before handing the HTML to the user. Commands assume the
-skill root as cwd (adjust the `scripts/` prefix for subtree installs).
+skill root as cwd (prefix paths with the subtree location, e.g.
+`.agents/skills/stevedore/`, in subtree installs).
 
 ## Checklist
 
@@ -12,7 +13,7 @@ skill root as cwd (adjust the `scripts/` prefix for subtree installs).
 2. **Slide count equals PowerPoint's.** Count slide containers in the output:
 
    ```bash
-   node scripts/pptx-to-html.js deck.pptx -o deck.html -q
+   node extract/pptx-to-html.js deck.pptx -o deck.html -q
    grep -c 'class="pp-slide' deck.html   # or count files in the --split dir
    ```
 

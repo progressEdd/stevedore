@@ -110,8 +110,8 @@ test('chartEx part: placeholder + approx diagnostics, no SVG bars', () => {
 
 test('parse is cache-only: no xlsx/zip access in the charts module', async () => {
   const fs = await import('node:fs');
-  const parse = fs.readFileSync('scripts/src/charts/parse.js', 'utf8');
-  const chartsRender = fs.readFileSync('scripts/src/charts/render.js', 'utf8');
+  const parse = fs.readFileSync('extract/src/charts/parse.js', 'utf8');
+  const chartsRender = fs.readFileSync('extract/src/charts/render.js', 'utf8');
   for (const src of [parse, chartsRender]) {
     assert.ok(!/xlsx|\.zip|zip\.js|rels\(/i.test(src), 'no workbook or package access: charts read caches only');
   }

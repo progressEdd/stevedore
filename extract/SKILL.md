@@ -23,7 +23,7 @@ diagnostics; you never open PowerPoint.
    prefix to wherever the subtree lives):
 
    ```bash
-   node scripts/pptx-to-html.js /path/to/deck.pptx -o /path/to/deck.html
+   node extract/pptx-to-html.js /path/to/deck.pptx -o /path/to/deck.html
    ```
 
 3. Read the stderr diagnostics. `approx`/`unsupported` lines mean the HTML is
@@ -32,7 +32,7 @@ diagnostics; you never open PowerPoint.
 4. For multi-author decks or per-slide editing, also emit the split form:
 
    ```bash
-   node scripts/pptx-to-html.js /path/to/deck.pptx --split -o /path/to/deck-dir/
+   node extract/pptx-to-html.js /path/to/deck.pptx --split -o /path/to/deck-dir/
    ```
 
 5. Validate the output with reference/validation.md (slide count, spot-check
@@ -53,4 +53,4 @@ diagnostics; you never open PowerPoint.
 | reference/usage.md | Full CLI reference: flags, exit codes, diagnostics kinds |
 | reference/fidelity.md | What renders fully vs. approximated vs. deferred (tier table) |
 | reference/validation.md | Post-conversion checklist and common fixes |
-| examples/land-e/ | Worked pair: real 20-slide deck pptx + its converted HTML |
+| LAND.E witness set | Real 20-slide deck + converted HTML + full round-trip artifacts — on the development repo's progressEdd branch: [00-supporting-files/data/land-e-tests](https://github.com/progressEdd/stevedore/tree/progressEdd/00-supporting-files/data/land-e-tests) |

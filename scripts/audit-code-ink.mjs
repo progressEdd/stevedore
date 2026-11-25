@@ -56,7 +56,9 @@ const rect = await page.evaluate(([sel, i]) => {
   const slide = document.querySelectorAll(sel)[i];
   if (!slide) return null;
   const s = slide.getBoundingClientRect();
-  const cands = [...slide.querySelectorAll('.pp-el')].filter(el => el.querySelector('span[style*="ui-monospace"]'));
+  // (02-FX9) mono spans now carry Consolas stacks (or the keyword stack) —
+  // match any mono-family span, not just the old ui-monospace signature.
+  const cands = [...slide.querySelectorAll('.pp-el')].filter(el => el.querySelector('span[style*="monospace" i], span[style*="Consolas" i]'));
   const codeEls = cands.length ? cands : [...slide.querySelectorAll('pre')];
   if (!codeEls.length) return null;
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;

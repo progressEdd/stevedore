@@ -1,12 +1,12 @@
 ---
-next_action: /skill:review
-progress: executed
+next_action: /skill:implement
+progress: planned
 ---
 
 # State
 
 **Phase:** 02 roundtrip-fidelity
-**Status:** executed — fix round 3 (FX6 fonts px-metrics, FX7 pseudo-z-index gradients, FX8 canonical artifacts + breakdown) pushed to PRs #67/#68 — awaiting PR merges, fresh re-verify, and the SC4 sign-off on slides 8/17
+**Status:** review round 4: fonts root cause proven (ui-monospace unresolved), gradients round 3 with hard STOP rule — fix plans 02-FX9..02-FX11 awaiting execution
 
 <!--
 STATE.md is the router surface. The frontmatter (next_action, progress) is the

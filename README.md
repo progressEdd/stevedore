@@ -1,7 +1,10 @@
 # stevedore — development branch (`progressEdd`)
 
 The **shipped skill** lives on `master` (and the `stevedore` distribution
-branch) — its README documents usage, zero-dependency install, the
+branch) — a set of scripts (generated with the help of GLM 5.3) that converts
+PowerPoint decks to self-contained HTML with a zero-dependency Node CLI, the
+inverse of dom-to-pptx, with the reverse direction (`html-to-pptx`) built in
+via the vendored dom-to-pptx fork. Its README documents usage, install, the
 round-trip loop, layout, and credits. Start there:
 [README on master](https://github.com/progressEdd/stevedore/blob/master/README.md).
 

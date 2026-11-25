@@ -1,36 +1,48 @@
-# Project Template Repo
-## Background
-Welcome to the template repository! I created this template repo so that as I start new projects, it is much faster to share to others
+# stevedore — `.pptx` → HTML agent skill
 
-## Getting Started
-This repo uses git submodules to embed other repos. To get started, clone the repository and initialize the submodules:
+Converts PowerPoint decks to self-contained HTML with a zero-dependency
+Node CLI — the inverse of dom-to-pptx. The reverse direction (`html-to-pptx`)
+is reserved for a later phase.
 
-If you would like a quick one line clone, you can use the following command:
-```bash
-git clone --recurse-submodules https://github.com/progressEdd/project-template.git
-```
+## Convert a deck (zero dependencies)
 
-If you have already cloned the repository, you can initialize the submodules with the following commands:
-```bash
-git pull
-git submodule update --init --recursive
-```
+Requires Node ≥ 18. No npm install — ever:
 
-If you only need specific submodules, you can initialize them individually:
-```bash
-# For just the dev-onboarding submodule
-git submodule update --init 01-dev-onboarding
-```
+    node scripts/pptx-to-html.js path/to/deck.pptx -o deck.html
 
-## Active Experiments
+Options: `--split` (per-slide folder + index.html), `--slides 1,3-5`,
+`--strict` (fail on any diagnostic), `-q`. Diagnostics print to stderr and
+list every approximated or deferred feature. See `reference/usage.md`.
 
-Projects branched from `00-experiments`, each with its own worktree in `02-worktrees/`.
+## Install into your repo (git subtree)
 
-| Branch | Description | Worktree Path | Created |
-|--------|-------------|---------------|---------|
-| `test-gsd-flow` | A test project to validate the end-to-end branch creation workflow. | `02-worktrees/test-gsd-flow` | 2026-02-13 |
+    git subtree add --prefix=.agents/skills/stevedore https://github.com/progressEdd/stevedore.git stevedore --squash
 
-To set up a worktree for an existing branch:
-```bash
-git worktree add 02-worktrees/<branch-name> <branch-name>
-```
+Then convert with `node .agents/skills/stevedore/scripts/pptx-to-html.js deck.pptx`.
+Pull updates with `git subtree pull --prefix=.agents/skills/stevedore <url> stevedore`.
+
+## Layout
+
+- `SKILL.md` — the agent skill (this repo/branch IS the skill folder)
+- `scripts/pptx-to-html.js` — the CLI
+- `scripts/export-slides.mjs` — deterministic per-slide PNG export of any HTML deck (Marp `section` or `.pp-slide`), 1280×720; playwright-driven (decision 13), pointed at nix chromium via `executablePath` — runs under `nix shell nixpkgs#chromium` with `STEVEDORE_CHROMIUM_PATH` set (see `scripts/setup-roundtrip.sh`)
+- `scripts/src/` — converter library: `opc/` (zip+content-types+rels), `pptx/` (model builders), `geometry/`, `charts/`, `render/` (string emitters), `util/`
+- `scripts/test/` — `node --test` suites; fixtures are generated, not committed binaries
+- `scripts/examples/` — worked example: real 20-slide deck + its converted HTML
+- `vendor/dom-to-pptx/` — vendored fork copy of [dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx) (MIT; fork: progressEdd/dom-to-pptx) — the html→pptx half of the round-trip; prep once with `scripts/setup-roundtrip.sh`
+- `vendor/PPTX2HTML/` — vendored reference copy of [PPTX2HTML](https://github.com/g21589/PPTX2HTML) (MIT; fork: progressEdd/PPTX2HTML) — solutions reference only, never shipped source
+- `reference/` — skill reference docs (usage, fidelity, validation)
+
+## Credits
+
+This is our own implementation. Logic in specific spots is adapted from —
+and credited inline in the source next to — these MIT-licensed references:
+
+- [PPTX2HTML](https://github.com/g21589/PPTX2HTML) (commit c8a96eb; fork: github.com/progressEdd/PPTX2HTML — each fix lives on its own branch there so upstream PRs stay one-click) —
+  architecture mirror (opc/pptx/render), diagnostics design, color/geometry
+  approaches.
+- [dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx) (v2.1.2; fork: github.com/progressEdd/dom-to-pptx — each fix lives on its own branch there so upstream PRs stay one-click) —
+  skill conventions (SKILL.md shape, reference docs), and its output decks
+  are the primary compatibility target.
+
+License: GPL-2.0-only (see LICENSE).

@@ -213,7 +213,7 @@ test('no emitted attribute carries a raw double-quoted family — document sweep
     }],
   });
   assert.ok(!/font-family:"/.test(html), 'attribute-breaking signature: font-family:"');
-  assert.ok(html.includes("font-family:'ui-monospace'"), 'monospace stack single-quoted');
+  assert.ok(html.includes("font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace"), 'monospace keyword emits the real stack'); // (02-FX9)
   assert.ok(html.includes("font-family:'-apple-system'"), 'sans stack single-quoted');
 });
 
@@ -225,4 +225,31 @@ test('fractional run sizes survive emission — VERIFICATION addendum #4 gap 6 (
     ] }] }] }],
   });
   assert.ok(html.includes('font-size:9.57px'), 'sz 718 -> 9.57px emitted, not the integer-snapped 10px');
+});
+
+test('ui-monospace emits the real resolvable mono stack — VERIFICATION addendum #5 gap 10 (02-FX9)', () => {
+  const { html } = render({
+    masters: [{}],
+    slides: [{ rels: [], texts: [{ paragraphs: [{ runs: [
+      { t: 'code', sz: 718, latin: 'ui-monospace', color: '4B5563' },
+    ] }] }] }],
+  });
+  assert.ok(html.includes(
+    "font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace"),
+    'the keyword maps to the probe-verified real stack');
+  assert.ok(!html.includes("font-family:'ui-monospace',"),
+    'the old theme-fallback stack (falls through to proportional sans) is gone');
+});
+
+test('mono faces carry a mono fallback chain and monospace generic — (02-FX9)', () => {
+  const { html } = render({
+    masters: [{}],
+    slides: [{ rels: [], texts: [{ paragraphs: [{ runs: [
+      { t: 'code', sz: 718, latin: 'Consolas', color: '4B5563' },
+    ] }] }] }],
+  });
+  assert.ok(html.includes("font-family:'Consolas', 'Liberation Mono', 'Courier New', monospace"),
+    'Consolas falls back to real mono faces, not the theme sans');
+  assert.ok(!html.includes("font-family:'Consolas', Calibri"),
+    'no proportional fallback inside a mono stack');
 });

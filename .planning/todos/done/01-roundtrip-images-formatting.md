@@ -29,3 +29,7 @@ not stated
 ## Decisions
 
 - Round-trip comparisons use the source HTML — `~/Documents/development_projects/progressEdd_projects/LAND.E/02-worktrees/presentation/slides.html` — as the full reference (it has the most proper format); the PDF is a visual formatting reference only
+
+## Resolution
+
+Done — resolved by phase 02-roundtrip-fidelity (shipped 2026-11-24, PRs #59/#63/#64/#67/#68). Media survival 15/15 byte-exact (the missing images were a staging artifact + exporter byte-handling, closed by the decision-6 re-run and fork branch fix/media-byte-embed); the rerun used reference/slides.html and per-slide PNG export is built into scripts/roundtrip.sh (export-slides.mjs); the per-slide breakdown lives in 00-supporting-files/data/land-e-tests/DRIFT-BREAKDOWN.md — every drift fixed-with-pointer or decision-8 deferred with evidence.

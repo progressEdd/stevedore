@@ -33,3 +33,7 @@ The exported slide images from the round-trip test (`tests/11-19-images/` — 14
 
 - Test data lives under `00-supporting-files/data/land-e-tests/` split into `reference/` (pristine) and `tests/` (round-trip artifacts + exports)
 - The re-run uses `reference/slides.html` as the full reference source (consistent with todo 01's decision: source HTML is the reference, PDF is formatting-only)
+
+## Resolution
+
+Done — resolved by phase 02-roundtrip-fidelity (shipped 2026-11-24, PRs #59/#63/#64/#67/#68). Media survival 15/15 byte-exact (the missing images were a staging artifact + exporter byte-handling, closed by the decision-6 re-run and fork branch fix/media-byte-embed); the rerun used reference/slides.html and per-slide PNG export is built into scripts/roundtrip.sh (export-slides.mjs); the per-slide breakdown lives in 00-supporting-files/data/land-e-tests/DRIFT-BREAKDOWN.md — every drift fixed-with-pointer or decision-8 deferred with evidence.

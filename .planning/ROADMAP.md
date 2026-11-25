@@ -68,6 +68,7 @@ Plans:
 Plans:
 - [x] 03-01: Restructure master into shippEdd-style capability folders — extract/render/export + top-level scripts machinery, clean break, ESM+gitignore landmines defused, witness byte-stability proof
 - [x] 03-02: Multi-format render — `--scale` (any resolution via deviceScaleFactor + natural-size viewport tracking) + `--pdf` (zero-dep IDAT-passthrough bundler, 540pt × aspect pages), defaults byte-stable
+- [x] 03-FX1: fix round-1 verification gaps — render/README byte-stability doctrine aligned to the exporter header; SCALE2 stochastic caveat recorded on 03-02-SUMMARY
 
 ## Progress
 

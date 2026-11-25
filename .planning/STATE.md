@@ -6,7 +6,7 @@ progress: executed
 # State
 
 **Phase:** 03 master-capabilities
-**Status:** executed — 2 plans sequential, landed via PR #84 into master; awaiting review
+**Status:** executed — 3 plans sequential (03-01, 03-02, 03-FX1 fix), landed via PR #84; awaiting re-verification
 
 <!--
 STATE.md is the router surface. The frontmatter (next_action, progress) is the

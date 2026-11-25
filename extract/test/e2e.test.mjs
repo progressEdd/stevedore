@@ -19,7 +19,7 @@ function runCli(...argv) {
   return spawnSync(process.execPath, [cli, ...argv], { encoding: 'utf8' });
 }
 
-test('consumer flow: node scripts/pptx-to-html.js <file>.pptx -o <out>.html (exit 0, real HTML on disk)', () => {
+test('consumer flow: node extract/pptx-to-html.js <file>.pptx -o <out>.html (exit 0, real HTML on disk)', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'pptx-'));
   const tmpPptx = path.join(dir, 'deck.pptx');
   const tmpOut = path.join(dir, 'out.html');
@@ -81,7 +81,7 @@ test('error path: non-zip input -> exit 2', () => {
 test('--help prints the usage block (--split and --strict documented)', () => {
   const r = runCli('--help');
   assert.equal(r.status, 0);
-  assert.match(r.stdout, /Usage: node scripts\/pptx-to-html\.js <input\.pptx> \[options\]/);
+  assert.match(r.stdout, /Usage: node extract\/pptx-to-html\.js <input\.pptx> \[options\]/);
   assert.ok(r.stdout.includes('--split'));
   assert.ok(r.stdout.includes('--strict'));
   assert.ok(r.stdout.includes('--slides'));

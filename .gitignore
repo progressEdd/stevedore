@@ -23,6 +23,8 @@ lib/
 lib64/
 # scripts/test/lib is the pptx fixture builder (source, not compiled output) — shippEdd 01-02
 !scripts/test/lib/
+# extract/test/lib is the deck fixture builder — same exception for the moved tree (03-01)
+!extract/test/lib/
 parts/
 sdist/
 var/

@@ -2,7 +2,9 @@
 
 Converts PowerPoint decks to self-contained HTML with a zero-dependency
 Node CLI — the inverse of dom-to-pptx. The reverse direction (`html-to-pptx`)
-is reserved for a later phase.
+is built in too: the vendored dom-to-pptx fork drives it, and
+`scripts/roundtrip.sh` runs the full loop — html → pptx → html → compare +
+per-slide PNG export (prep once with `scripts/setup-roundtrip.sh`).
 
 ## Convert a deck (zero dependencies)
 
@@ -32,6 +34,20 @@ Pull updates with `git subtree pull --prefix=.agents/skills/stevedore <url> stev
 - `vendor/dom-to-pptx/` — vendored fork copy of [dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx) (MIT; fork: progressEdd/dom-to-pptx) — the html→pptx half of the round-trip; prep once with `scripts/setup-roundtrip.sh`
 - `vendor/PPTX2HTML/` — vendored reference copy of [PPTX2HTML](https://github.com/g21589/PPTX2HTML) (MIT; fork: progressEdd/PPTX2HTML) — solutions reference only, never shipped source
 - `reference/` — skill reference docs (usage, fidelity, validation)
+
+## Replicating the development repo
+
+The repo used to develop this skill is **not this branch** — it's the
+`progressEdd` branch, which carries the full development setup:
+`.planning/` (the shippEdd workflow state — roadmap, phases, plans,
+summaries, verification), `.pi/agents/` (agent personas), and
+`00-supporting-files/` (test fixtures plus the canonical LAND.E round-trip
+artifact set). To make your own copy of the development repo, fork this
+repo on GitHub and check out that branch in your clone:
+
+    git checkout progressEdd
+
+The default branch (`master`) carries only the shipped skill.
 
 ## Credits
 

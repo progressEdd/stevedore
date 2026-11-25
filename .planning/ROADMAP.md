@@ -6,13 +6,13 @@
 
 ## Next up
 
-**Phase 03: master-capabilities** — awaiting review (`/skill:review`)
+**none — roadmap complete**
 
 ## Phases
 
 - [x] **Phase 01: pptx-to-html** — an agent skill that converts `.pptx` decks to HTML — our own implementation (PPTX2HTML as reference), living on a clean `stevedore` branch, consumed via git subtree
 - [x] **Phase 02: roundtrip-fidelity** — fix the LAND.E round-trip (images, media slides, formatting drift) with per-slide PNG export built into the flow
-- [ ] **Phase 03: master-capabilities** — deliver the 2 promoted todos: master capability folders, multi-format export
+- [x] **Phase 03: master-capabilities** — deliver the 2 promoted todos: master capability folders, multi-format export
 
 ## Phase details
 
@@ -76,7 +76,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 01 `pptx-to-html` | 8/8 | Shipped | 2026-11-20 |
 | 02 `roundtrip-fidelity` | 6/6 | Shipped | 2026-11-24 |
-| 03 `master-capabilities` | 0/0 | Not started | — |
+| 03 `master-capabilities` | 3/3 | Shipped | 2026-11-25 |
 
 <!--
 Conventions:

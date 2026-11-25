@@ -1,12 +1,12 @@
 ---
-next_action: /skill:review
-progress: executed
+next_action: /skill:define
+progress: shipped
 ---
 
 # State
 
 **Phase:** 03 master-capabilities
-**Status:** executed — 3 plans sequential (03-01, 03-02, 03-FX1 fix), landed via PR #84; awaiting re-verification
+**Status:** shipped — PASSED (round 2, zero unaccepted gaps; round-1 gaps closed by 03-FX1); roadmap complete
 
 <!--
 STATE.md is the router surface. The frontmatter (next_action, progress) is the

@@ -655,7 +655,10 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
   return {
     color: colorObj.hex || '000000',
     ...(transparency > 0 && { transparency }),
-    fontFace: style.fontFamily.split(',')[0].replace(/['"]/g, ''),
+    // (fix/real-mono-typeface) a leading ui-* keyword would land verbatim
+    // in <a:latin typeface="…"> and render proportionally in PowerPoint —
+    // map it to a real font (ui-monospace -> Consolas).
+    fontFace: resolveRealTypeface(style.fontFamily.split(',')[0]),
     fontSize: fontSizePx * 0.75 * scale,
     bold: parseInt(style.fontWeight) >= 600,
     italic: style.fontStyle === 'italic',
@@ -673,6 +676,25 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
       ? { charSpacing: parseFloat(style.letterSpacing) * 0.75 * scale }
       : {}),
   };
+}
+
+/**
+ * Maps a CSS ui-* generic keyword family to a real font for pptx run
+ * properties (fix/real-mono-typeface). font-family resolution is a browser
+ * concept: PowerPoint does not resolve keyword typefaces by family class —
+ * `latin typeface="ui-monospace"` renders with a proportional default, the
+ * same failure chromium shows when the keyword resolves to nothing. Real
+ * families pass through unchanged.
+ */
+const UI_TYPEFACE_MAP = {
+  'ui-monospace': 'Consolas',
+  'ui-sans-serif': 'Calibri',
+  'ui-serif': 'Georgia',
+  'ui-rounded': 'Calibri',
+};
+export function resolveRealTypeface(firstFamilyToken) {
+  const token = String(firstFamilyToken ?? '').trim().replace(/['"]/g, '');
+  return UI_TYPEFACE_MAP[token] ?? token;
 }
 
 /**

@@ -1,7 +1,7 @@
 ---
 name: master-capability-folders
 captured: 2026-11-24
-what: "restructure the master branch with shippEdd-style capability folders — extract (pptx→html), export (html→pptx), compare, render, audit, roundtrip — and expose the unique functions each in their own folder"
+what: "restructure the master branch with shippEdd-style capability folders — extract (pptx→html), export (html→pptx), render (deck→PNG) — with verification machinery (compare/audit/roundtrip) in a top-level scripts/"
 severity: medium
 context: "master currently mixes five distinct functions flat in one scripts/ dir; the user wants shippEdd's pattern (progressEdd/shippEdd): one folder per capability, each self-contained, shared infra top-level"
 files:
@@ -25,15 +25,14 @@ The master branch (shipped skill content, merged from stevedore via PR #75) has 
 
 ## Solution
 
-Restructure per the proposed layout (settled in conversation, 2026-11-24):
+Restructure per the slim layout (settled in conversation, 2026-11-24 — trimmed from an earlier six-folder draft: compare/audit/roundtrip are verification machinery, not user-invoked capabilities, so they follow shippEdd's shared-machinery convention):
 
 ```
-extract/      pptx → html   (pptx-to-html.js, src/, test/, examples/)
-export/       html → pptx   (NEW standalone entry html-to-pptx.sh wrapping vendor/dom-to-pptx — currently only reachable buried in roundtrip.sh)
-compare/      deck diffing  (compare-decks.mjs, survival gate)
-render/       deterministic per-slide PNG export (export-slides.mjs, playwright)
-audit/        visual QA probes (audit-code-ink / font-metrics / gradient-paint / mono-width)
-roundtrip/    orchestration (roundtrip.sh, setup-roundtrip.sh, vendor-sync.sh)
+extract/    pptx → html   (pptx-to-html.js, src/, test/, examples/)
+export/     html → pptx   (NEW standalone entry html-to-pptx.sh wrapping vendor/dom-to-pptx — currently only reachable buried in roundtrip.sh)
+render/     deck → PNG    (export-slides.mjs; todo 05's PDF/resolution modes land here)
+scripts/    verification machinery: compare-decks.mjs · audit-*.mjs ×4 ·
+            roundtrip.sh · setup-roundtrip.sh · vendor-sync.sh
 reference/, vendor/, SKILL.md, README.md, LICENSE stay top-level
 ```
 
@@ -48,8 +47,9 @@ Breaking-change handling required: SKILL.md + README path updates (`node .agents
 
 ## Decisions
 
-- Folder-per-capability modeled on progressEdd/shippEdd
-- Capabilities exposed: extract (pptx→html), export (html→pptx), compare, render (PNG export), audit, roundtrip (orchestration)
+- Folder-per-capability modeled on progressEdd/shippEdd — capability = a consumer-invoked function
+- Capabilities exposed (trimmed 2026-11-24): extract (pptx→html), export (html→pptx), render (deck→PNG)
+- compare/audit/roundtrip are NOT capability folders — they live in the top-level `scripts/` as verification machinery, per shippEdd's shared-machinery convention
 - export/ gains a standalone html-to-pptx entry (not just the buried roundtrip stage)
 - vendor/ and reference/ stay top-level (shared, not functions)
 - Not yet settled: execution mode (Phase 03 via the loop vs direct edit) — the user parked it before choosing

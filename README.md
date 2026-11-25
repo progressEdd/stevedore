@@ -1,20 +1,14 @@
 # stevedore — `.pptx` → HTML agent skill
 
-Converts PowerPoint decks to self-contained HTML with a zero-dependency
-Node CLI — the inverse of dom-to-pptx. The reverse direction (`html-to-pptx`)
-is built in too: the vendored dom-to-pptx fork drives it, and
-`scripts/roundtrip.sh` runs the full loop — html → pptx → html → compare +
-per-slide PNG export (prep once with `scripts/setup-roundtrip.sh`).
+A set of scripts (generated with the help of GLM 5.3) that converts PowerPoint decks to self-contained HTML with a zero-dependency Node CLI — the inverse of dom-to-pptx. The reverse direction (`html-to-pptx`) is built in too: the vendored dom-to-pptx fork drives it, and `scripts/roundtrip.sh` runs the full loop — html → pptx → html → compare + per-slide PNG export (prep once with `scripts/setup-roundtrip.sh`).
 
 ## Convert a deck (zero dependencies)
 
-Requires Node ≥ 18. No npm install — ever:
+Requires Node ≥ 18:
 
     node scripts/pptx-to-html.js path/to/deck.pptx -o deck.html
 
-Options: `--split` (per-slide folder + index.html), `--slides 1,3-5`,
-`--strict` (fail on any diagnostic), `-q`. Diagnostics print to stderr and
-list every approximated or deferred feature. See `reference/usage.md`.
+Options: `--split` (per-slide folder + index.html), `--slides 1,3-5`, `--strict` (fail on any diagnostic), `-q`. Diagnostics print to stderr and list every approximated or deferred feature. See `reference/usage.md`.
 
 ## Install into your repo (git subtree)
 
@@ -37,12 +31,7 @@ Pull updates with `git subtree pull --prefix=.agents/skills/stevedore <url> stev
 
 ## Replicating the development repo
 
-The repo used to develop this skill is **not this branch** — it's the
-`progressEdd` branch, which carries the full development setup:
-`.planning/` (the shippEdd workflow state — roadmap, phases, plans,
-summaries, verification), `.pi/agents/` (agent personas), and
-`00-supporting-files/` (test fixtures plus the canonical LAND.E round-trip
-artifact set). To make your own copy of the development repo, fork this
+The repo used to develop this skill is **not this branch** — it's the `progressEdd` branch, which carries the full development setup: `.planning/` (the shippEdd workflow state — roadmap, phases, plans, summaries, verification), `.pi/agents/` (agent personas), and `00-supporting-files/` (test fixtures plus the canonical LAND.E round-trip artifact set). To make your own copy of the development repo, fork this
 repo on GitHub and check out that branch in your clone:
 
     git checkout progressEdd
@@ -51,8 +40,7 @@ The default branch (`master`) carries only the shipped skill.
 
 ## Credits
 
-This is our own implementation. Logic in specific spots is adapted from —
-and credited inline in the source next to — these MIT-licensed references:
+The scripts are  adapted from — and credited inline in the source next to — these MIT-licensed references:
 
 - [PPTX2HTML](https://github.com/g21589/PPTX2HTML) (commit c8a96eb; fork: github.com/progressEdd/PPTX2HTML — each fix lives on its own branch there so upstream PRs stay one-click) —
   architecture mirror (opc/pptx/render), diagnostics design, color/geometry

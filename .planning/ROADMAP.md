@@ -6,13 +6,13 @@
 
 ## Next up
 
-**none — roadmap complete**
+**Phase 03: master-capabilities** — awaiting review (`/skill:review`)
 
 ## Phases
 
 - [x] **Phase 01: pptx-to-html** — an agent skill that converts `.pptx` decks to HTML — our own implementation (PPTX2HTML as reference), living on a clean `stevedore` branch, consumed via git subtree
 - [x] **Phase 02: roundtrip-fidelity** — fix the LAND.E round-trip (images, media slides, formatting drift) with per-slide PNG export built into the flow
-- [ ] **Phase 03: <slug>** — <one-line description>
+- [ ] **Phase 03: master-capabilities** — deliver the 2 promoted todos: master capability folders, multi-format export
 
 ## Phase details
 
@@ -56,12 +56,26 @@ Plans:
 - [x] 02-05: Re-run from reference/slides.html, gap census, converter-side video rendering, dom-to-pptx fixes as fork branches + vendor sync, defer valve
 - [x] 02-06: Canonical artifacts on progressEdd (pptx + HTML + 40 PNGs), DRIFT-BREAKDOWN.md all 20 slides, user sign-off package
 
+### Phase 03: master-capabilities
+
+- **Goal:** Deliver the 2 promoted todos: master capability folders, multi-format export.
+- **Depends on:** nothing
+- **Requirements:** none recorded — promoted from todos
+- **Success criteria** (what must be TRUE):
+  1. restructure the master branch with shippEdd-style capability folders — extract (pptx→html), export (html→pptx), render (deck→PNG) — with verification machinery (compare/audit/roundtrip) in a top-level scripts/
+  2. export whole decks to PDF and PNG at any requested resolution (currently PNG-only, hardcoded 1280×720)
+
+Plans:
+- [x] 03-01: Restructure master into shippEdd-style capability folders — extract/render/export + top-level scripts machinery, clean break, ESM+gitignore landmines defused, witness byte-stability proof
+- [x] 03-02: Multi-format render — `--scale` (any resolution via deviceScaleFactor + natural-size viewport tracking) + `--pdf` (zero-dep IDAT-passthrough bundler, 540pt × aspect pages), defaults byte-stable
+
 ## Progress
 
 | Phase | Plans complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 01 `pptx-to-html` | 8/8 | Shipped | 2026-11-20 |
 | 02 `roundtrip-fidelity` | 6/6 | Shipped | 2026-11-24 |
+| 03 `master-capabilities` | 0/0 | Not started | — |
 
 <!--
 Conventions:

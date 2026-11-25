@@ -15,27 +15,40 @@
 //
 // Usage: node render/export-slides.mjs <deck.html> -o <outdir>
 //          [--selector <css>] [--width 1280] [--height 720]
+//          [--scale <n>] [--pdf]
+// --scale <n>: capture deviceScaleFactor — output pixels = ceil(slide CSS
+//   rect) × n (a 1280×720 deck at --scale 2 → 2560×1440). At non-default
+//   scale the viewport auto-tracks the deck's natural CSS size unless
+//   --width/--height was passed, so viewport-scaled deck shapes (Marp
+//   sections) capture at exactly natural × n. Default 1 — the phase-02
+//   capture recipe, unchanged (witness byte-stability).
+// --pdf: also write <outdir>/deck.pdf — whole-deck, one page per slide,
+//   7.5in-height pages (width = 540pt × slide aspect), the PNGs embedded
+//   verbatim (render/pdf-bundler.mjs). Sharpness follows the PNG resolution.
 // Selector auto-detect: `.pp-slide` if the deck has one, else `section`.
 //
 // Determinism = fixed tool + fixed viewport + fixed flags; it does NOT
 // promise byte-identical PNGs across runs (chromium antialiasing may vary) —
 // never gate on byte equality.
 
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pngsToPdf } from './pdf-bundler.mjs';
 
 export const pad2 = (n) => String(n).padStart(2, '0');
 
 export function parseArgs(argv) {
-  const a = { width: 1280, height: 720, selector: null, html: null, out: null };
+  const a = { width: 1280, height: 720, scale: 1, pdf: false, viewportExplicit: false, selector: null, html: null, out: null };
   const rest = [];
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '-o') a.out = argv[++i];
     else if (argv[i] === '--selector') a.selector = argv[++i];
-    else if (argv[i] === '--width') a.width = Number(argv[++i]);
-    else if (argv[i] === '--height') a.height = Number(argv[++i]);
+    else if (argv[i] === '--width') { a.width = Number(argv[++i]); a.viewportExplicit = true; }
+    else if (argv[i] === '--height') { a.height = Number(argv[++i]); a.viewportExplicit = true; }
+    else if (argv[i] === '--scale') a.scale = Number(argv[++i]);
+    else if (argv[i] === '--pdf') a.pdf = true;
     else rest.push(argv[i]);
   }
   a.html = rest[0] ?? null;
@@ -45,7 +58,11 @@ export function parseArgs(argv) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.html || !args.out) {
-    process.stderr.write('Usage: node render/export-slides.mjs <deck.html> -o <outdir> [--selector css] [--width 1280] [--height 720]\n');
+    process.stderr.write('Usage: node render/export-slides.mjs <deck.html> -o <outdir> [--selector css] [--width 1280] [--height 720] [--scale 1] [--pdf]\n');
+    process.exit(2);
+  }
+  if (!(args.scale > 0)) {
+    process.stderr.write(`export-slides: --scale must be a positive number (got ${args.scale})\n`);
     process.exit(2);
   }
   if (!process.env.STEVEDORE_CHROMIUM_PATH) {
@@ -70,7 +87,7 @@ async function main() {
   try {
     const context = await browser.newContext({
       viewport: { width: args.width, height: args.height },
-      deviceScaleFactor: 1,
+      deviceScaleFactor: args.scale,   // default 1 — phase-02 recipe; opt-in scale multiplies output px
     });
     const page = await context.newPage();
     await page.goto(pathToFileURL(resolve(args.html)).href, { waitUntil: 'networkidle' });
@@ -103,10 +120,36 @@ async function main() {
       process.stderr.write(`export-slides: no elements match ${selector} in ${args.html}\n`);
       process.exit(1);
     }
+    // Resolution knob (03-02): at non-default scale, track the viewport to
+    // the deck's natural CSS size (unless the caller pinned it with
+    // --width/--height) so viewport-scaled shapes — Marp sections inside a
+    // 100vw/100vh svg — capture at exactly natural × scale instead of
+    // letterboxing/shrinking in the 1280×720 default viewport. Fixed-px
+    // .pp-slide decks are viewport-independent (captureBeyondViewport), so
+    // this is belt-and-braces there. Default path (scale 1): no evaluate,
+    // no resize — the capture recipe is byte-identical to phase 02.
+    if (args.scale !== 1 && !args.viewportExplicit) {
+      const natural = await page.evaluate(() => {
+        const vb = document.querySelector('svg[data-marpit-svg]')?.getAttribute('viewBox');
+        if (vb) {
+          const m = /^[\d.]+ [\d.]+ (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)$/.exec(vb.trim());
+          if (m) return { w: Math.round(+m[1]), h: Math.round(+m[2]) };
+        }
+        const el = document.querySelector('.pp-slide');
+        if (el) return { w: el.offsetWidth, h: el.offsetHeight };
+        return null;
+      });
+      if (natural) await page.setViewportSize({ width: natural.w, height: natural.h });
+    }
     mkdirSync(args.out, { recursive: true });
     for (let i = 0; i < els.length; i++)
       await els[i].screenshot({ path: resolve(args.out, `${pad2(i + 1)}.png`) });
-    process.stdout.write(`exported ${els.length} slides (${selector}) -> ${args.out}\n`);
+    if (args.pdf) {
+      // Whole-deck PDF (03-02, decisions 2+4): bundle the just-written PNGs —
+      // read-back so the proven screenshot-to-path loop stays byte-untouched.
+      writeFileSync(resolve(args.out, 'deck.pdf'), pngsToPdf(els.map((_, i) => resolve(args.out, `${pad2(i + 1)}.png`))));
+    }
+    process.stdout.write(`exported ${els.length} slides (${selector}) -> ${args.out}${args.pdf ? ' (+ deck.pdf)' : ''}\n`);
   } finally {
     await browser.close();
   }

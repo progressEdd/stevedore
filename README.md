@@ -25,7 +25,7 @@ Defaults: slides selected by `section`, 13.333×7.5 in (16:9), title = input bas
     nix shell nixpkgs#chromium --command env STEVEDORE_CHROMIUM_PATH=$(command -v chromium) \
       node render/export-slides.mjs path/to/deck.html -o outdir/
 
-One PNG per slide (Marp `section` or `.pp-slide` auto-detected), captured by one deterministic tool — both sides of a round-trip comparison, apples to apples. Prep once with `scripts/setup-roundtrip.sh` (playwright install).
+One PNG per slide (Marp `section` or `.pp-slide` auto-detected), captured by one deterministic tool — both sides of a round-trip comparison, apples to apples. Prep once with `scripts/setup-roundtrip.sh` (playwright install). Optional `--scale N` (any requested resolution) and `--pdf` (whole-deck PDF, 7.5in pages) — both opt-in; defaults are the byte-stable 1280×720 capture.
 
 ## Install into your repo (git subtree)
 
@@ -38,7 +38,7 @@ Pull updates with `git subtree pull --prefix=.agents/skills/stevedore <url> mast
 
 - `extract/` — the pptx→html capability: `pptx-to-html.js` (CLI), `src/` (converter library: `opc/` (zip+content-types+rels), `pptx/` (model builders), `geometry/`, `charts/`, `render/` (string emitters), `util/`), `test/` (`node --test` suites — fixtures are generated, not committed binaries), `package.json` (`"type": "module"` — load-bearing for the `.js` engine files), `SKILL.md` + `README.md`
 - `export/` — the html→pptx capability: `html-to-pptx.sh` (wraps the vendored dom-to-pptx CLI), `SKILL.md` + `README.md`
-- `render/` — the deck→PNG capability: `export-slides.mjs` — deterministic per-slide PNG export of any HTML deck (Marp `section` or `.pp-slide`), 1280×720; playwright-driven, pointed at nix chromium via `executablePath` — runs under `nix shell nixpkgs#chromium` with `STEVEDORE_CHROMIUM_PATH` set (see `scripts/setup-roundtrip.sh`); `test/`, `SKILL.md` + `README.md`
+- `render/` — the deck→PNG capability: `export-slides.mjs` — deterministic per-slide PNG export of any HTML deck (Marp `section` or `.pp-slide`), 1280×720 default with `--scale` for any resolution and `--pdf` for a whole-deck PDF; playwright-driven, pointed at nix chromium via `executablePath` — runs under `nix shell nixpkgs#chromium` with `STEVEDORE_CHROMIUM_PATH` set (see `scripts/setup-roundtrip.sh`); `test/`, `SKILL.md` + `README.md`
 - `scripts/` — shared verification machinery: `compare-decks.mjs`, the four calibrated auditors `audit-{code-ink,font-metrics,gradient-paint,mono-width}.mjs` (they replicate render/export-slides.mjs's capture recipe — KEEP IN SYNC), `roundtrip.sh` (the full html → pptx → html → export → compare loop), `setup-roundtrip.sh`, `vendor-sync.sh`, `test/` (comparator tests + `lib/ink.mjs`)
 - `vendor/dom-to-pptx/` — vendored fork copy of [dom-to-pptx](https://github.com/atharva9167j/dom-to-pptx) (MIT; fork: progressEdd/dom-to-pptx) — the html→pptx half of the round-trip; prep once with `scripts/setup-roundtrip.sh`
 - `vendor/PPTX2HTML/` — vendored reference copy of [PPTX2HTML](https://github.com/g21589/PPTX2HTML) (MIT; fork: progressEdd/PPTX2HTML) — solutions reference only, never shipped source
